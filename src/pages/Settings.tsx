@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { Bell, DeviceMobile, Globe, Shield } from "lucide-react";
+import { Bell, Smartphone, Globe, Shield } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Settings = () => {
@@ -205,7 +204,7 @@ const Settings = () => {
               
               <div>
                 <h3 className="font-medium mb-4 flex items-center">
-                  <DeviceMobile className="h-5 w-5 mr-2" />
+                  <Smartphone className="h-5 w-5 mr-2" />
                   Push Notifications
                 </h3>
                 <div className="space-y-3">
