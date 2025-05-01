@@ -1,12 +1,10 @@
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Resume } from "@/services/documentService";
-import { Plus, Trash } from "lucide-react";
+import React, { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Resume } from '@/services/documentService';
 
 interface ResumeFormProps {
   open: boolean;
@@ -15,118 +13,266 @@ interface ResumeFormProps {
   onSave: (data: any) => Promise<void>;
 }
 
-const ResumeForm = ({ open, onOpenChange, initialData, onSave }: ResumeFormProps) => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState<any>(initialData ? initialData.content : {
-    name: "",
-    contact: {
-      email: "",
-      phone: "",
-      location: ""
-    },
-    summary: "",
-    experience: [{ title: "", company: "", dates: "", bullets: [""] }],
-    education: [{ degree: "", institution: "", dates: "" }],
-    skills: [""]
-  });
-  const [title, setTitle] = useState(initialData?.title || "");
-
-  const handleInputChange = (path: string[], value: any) => {
-    setFormData((prev: any) => {
-      const newData = { ...prev };
-      let current = newData;
-      
-      // Navigate to the correct nest level
-      for (let i = 0; i < path.length - 1; i++) {
-        if (!current[path[i]]) {
-          current[path[i]] = {};
-        }
-        current = current[path[i]];
-      }
-      
-      // Set the value
-      current[path[path.length - 1]] = value;
-      return newData;
-    });
-  };
-
-  const handleAddExperience = () => {
-    setFormData((prev: any) => ({
-      ...prev,
-      experience: [
-        ...prev.experience,
-        { title: "", company: "", dates: "", bullets: [""] }
-      ]
-    }));
-  };
-
-  const handleRemoveExperience = (index: number) => {
-    setFormData((prev: any) => ({
-      ...prev,
-      experience: prev.experience.filter((_: any, i: number) => i !== index)
-    }));
-  };
-
-  const handleAddBullet = (expIndex: number) => {
-    setFormData((prev: any) => {
-      const newData = { ...prev };
-      newData.experience[expIndex].bullets.push("");
-      return newData;
-    });
-  };
-
-  const handleRemoveBullet = (expIndex: number, bulletIndex: number) => {
-    setFormData((prev: any) => {
-      const newData = { ...prev };
-      newData.experience[expIndex].bullets = newData.experience[expIndex].bullets
-        .filter((_: any, i: number) => i !== bulletIndex);
-      return newData;
-    });
-  };
-
-  const handleAddEducation = () => {
-    setFormData((prev: any) => ({
-      ...prev,
+const ResumeForm: React.FC<ResumeFormProps> = ({ 
+  open, 
+  onOpenChange, 
+  initialData,
+  onSave
+}) => {
+  const [formData, setFormData] = useState({
+    title: initialData?.title || '',
+    content: initialData?.content || {
+      personalInfo: {
+        name: '',
+        email: '',
+        phone: '',
+        address: '',
+        linkedin: '',
+        website: ''
+      },
+      summary: '',
       education: [
-        ...prev.education,
-        { degree: "", institution: "", dates: "" }
+        {
+          id: '1',
+          institution: '',
+          degree: '',
+          fieldOfStudy: '',
+          startDate: '',
+          endDate: '',
+          description: ''
+        }
+      ],
+      experience: [
+        {
+          id: '1',
+          company: '',
+          position: '',
+          location: '',
+          startDate: '',
+          endDate: '',
+          description: '',
+          highlights: ['']
+        }
+      ],
+      skills: [''],
+      certifications: [
+        {
+          id: '1',
+          name: '',
+          issuer: '',
+          date: '',
+          description: ''
+        }
+      ],
+      projects: [
+        {
+          id: '1',
+          name: '',
+          description: '',
+          url: '',
+          highlights: ['']
+        }
       ]
-    }));
+    }
+  });
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeSection, setActiveSection] = useState('personalInfo');
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    if (name.includes('.')) {
+      const [section, field] = name.split('.');
+      setFormData({
+        ...formData,
+        content: {
+          ...formData.content,
+          [section]: {
+            ...formData.content[section],
+            [field]: value
+          }
+        }
+      });
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value
+      });
+    }
   };
 
-  const handleRemoveEducation = (index: number) => {
-    setFormData((prev: any) => ({
-      ...prev,
-      education: prev.education.filter((_: any, i: number) => i !== index)
-    }));
+  const handleArrayChange = (section: string, index: number, value: string) => {
+    const newArray = [...formData.content[section]];
+    newArray[index] = value;
+
+    setFormData({
+      ...formData,
+      content: {
+        ...formData.content,
+        [section]: newArray
+      }
+    });
   };
 
-  const handleAddSkill = () => {
-    setFormData((prev: any) => ({
-      ...prev,
-      skills: [...prev.skills, ""]
-    }));
+  const handleObjectArrayChange = (
+    section: string, 
+    index: number, 
+    field: string, 
+    value: string
+  ) => {
+    const newArray = [...formData.content[section]];
+    newArray[index] = {
+      ...newArray[index],
+      [field]: value
+    };
+
+    setFormData({
+      ...formData,
+      content: {
+        ...formData.content,
+        [section]: newArray
+      }
+    });
   };
 
-  const handleRemoveSkill = (index: number) => {
-    setFormData((prev: any) => ({
-      ...prev,
-      skills: prev.skills.filter((_: any, i: number) => i !== index)
-    }));
+  const addArrayItem = (section: string, template: any) => {
+    const newArray = [...formData.content[section]];
+    
+    // Find the highest ID in the current array items
+    const maxId = newArray.reduce((max, item) => {
+      const itemId = item.id ? parseInt(item.id) : 0;
+      return Math.max(max, itemId);
+    }, 0);
+    
+    // Create new item with incremented ID
+    const newItem = {
+      ...template,
+      id: String(maxId + 1) // Convert to string to fix TypeScript error
+    };
+    
+    newArray.push(newItem);
+    
+    setFormData({
+      ...formData,
+      content: {
+        ...formData.content,
+        [section]: newArray
+      }
+    });
+  };
+
+  const removeArrayItem = (section: string, index: number) => {
+    const newArray = [...formData.content[section]];
+    newArray.splice(index, 1);
+    
+    // If removing the last item, add a blank template
+    if (newArray.length === 0) {
+      if (section === 'education') {
+        newArray.push({
+          id: '1', // Convert to string to fix TypeScript error
+          institution: '',
+          degree: '',
+          fieldOfStudy: '',
+          startDate: '',
+          endDate: '',
+          description: ''
+        });
+      } else if (section === 'experience') {
+        newArray.push({
+          id: '1', // Convert to string to fix TypeScript error
+          company: '',
+          position: '',
+          location: '',
+          startDate: '',
+          endDate: '',
+          description: '',
+          highlights: ['']
+        });
+      } else if (section === 'certifications') {
+        newArray.push({
+          id: '1', // Convert to string to fix TypeScript error
+          name: '',
+          issuer: '',
+          date: '',
+          description: ''
+        });
+      } else if (section === 'projects') {
+        newArray.push({
+          id: '1', // Convert to string to fix TypeScript error
+          name: '',
+          description: '',
+          url: '',
+          highlights: ['']
+        });
+      }
+    }
+    
+    setFormData({
+      ...formData,
+      content: {
+        ...formData.content,
+        [section]: newArray
+      }
+    });
+  };
+
+  const addNestedArrayItem = (section: string, index: number, subField: string) => {
+    const newArray = [...formData.content[section]];
+    newArray[index][subField] = [...newArray[index][subField], ''];
+    
+    setFormData({
+      ...formData,
+      content: {
+        ...formData.content,
+        [section]: newArray
+      }
+    });
+  };
+
+  const removeNestedArrayItem = (section: string, index: number, subField: string, subIndex: number) => {
+    const newArray = [...formData.content[section]];
+    
+    if (newArray[index][subField].length > 1) {
+      newArray[index][subField].splice(subIndex, 1);
+    } else {
+      newArray[index][subField] = [''];
+    }
+    
+    setFormData({
+      ...formData,
+      content: {
+        ...formData.content,
+        [section]: newArray
+      }
+    });
+  };
+
+  const handleNestedArrayChange = (
+    section: string, 
+    index: number, 
+    subField: string, 
+    subIndex: number, 
+    value: string
+  ) => {
+    const newArray = [...formData.content[section]];
+    newArray[index][subField][subIndex] = value;
+    
+    setFormData({
+      ...formData,
+      content: {
+        ...formData.content,
+        [section]: newArray
+      }
+    });
   };
 
   const handleSubmit = async () => {
-    if (!title.trim()) {
-      return;
-    }
-    
     setIsSubmitting(true);
     try {
-      await onSave({
-        title,
-        content: formData
-      });
+      await onSave(formData);
       onOpenChange(false);
+    } catch (error) {
+      console.error('Error saving resume:', error);
     } finally {
       setIsSubmitting(false);
     }
@@ -136,282 +282,474 @@ const ResumeForm = ({ open, onOpenChange, initialData, onSave }: ResumeFormProps
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{initialData ? "Edit Resume" : "Create New Resume"}</DialogTitle>
+          <DialogTitle>{initialData ? 'Edit Resume' : 'Create New Resume'}</DialogTitle>
         </DialogHeader>
         
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Label htmlFor="title">Resume Title</Label>
-            <Input
-              id="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g., Software Developer Resume"
+        <div className="space-y-4">
+          <div className="flex gap-2 mb-4">
+            <Button 
+              size="sm" 
+              variant={activeSection === 'personalInfo' ? 'default' : 'outline'} 
+              onClick={() => setActiveSection('personalInfo')}
+            >
+              Personal Info
+            </Button>
+            <Button 
+              size="sm" 
+              variant={activeSection === 'summary' ? 'default' : 'outline'} 
+              onClick={() => setActiveSection('summary')}
+            >
+              Summary
+            </Button>
+            <Button 
+              size="sm" 
+              variant={activeSection === 'education' ? 'default' : 'outline'} 
+              onClick={() => setActiveSection('education')}
+            >
+              Education
+            </Button>
+            <Button 
+              size="sm" 
+              variant={activeSection === 'experience' ? 'default' : 'outline'} 
+              onClick={() => setActiveSection('experience')}
+            >
+              Experience
+            </Button>
+            <Button 
+              size="sm" 
+              variant={activeSection === 'skills' ? 'default' : 'outline'} 
+              onClick={() => setActiveSection('skills')}
+            >
+              Skills
+            </Button>
+            <Button 
+              size="sm" 
+              variant={activeSection === 'projects' ? 'default' : 'outline'} 
+              onClick={() => setActiveSection('projects')}
+            >
+              Projects
+            </Button>
+            <Button 
+              size="sm" 
+              variant={activeSection === 'certifications' ? 'default' : 'outline'} 
+              onClick={() => setActiveSection('certifications')}
+            >
+              Certifications
+            </Button>
+          </div>
+
+          <div>
+            <Input 
+              name="title" 
+              value={formData.title} 
+              onChange={handleChange} 
+              placeholder="Resume Title"
+              className="mb-4"
             />
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="name">Full Name</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => handleInputChange(["name"], e.target.value)}
-              placeholder="John Doe"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                value={formData.contact?.email || ""}
-                onChange={(e) => handleInputChange(["contact", "email"], e.target.value)}
-                placeholder="johndoe@example.com"
+          {activeSection === 'personalInfo' && (
+            <div className="space-y-4">
+              <h3 className="font-medium">Personal Information</h3>
+              <Input 
+                name="personalInfo.name" 
+                value={formData.content.personalInfo.name} 
+                onChange={handleChange} 
+                placeholder="Name"
+              />
+              <Input 
+                name="personalInfo.email" 
+                value={formData.content.personalInfo.email} 
+                onChange={handleChange} 
+                placeholder="Email"
+              />
+              <Input 
+                name="personalInfo.phone" 
+                value={formData.content.personalInfo.phone} 
+                onChange={handleChange} 
+                placeholder="Phone"
+              />
+              <Input 
+                name="personalInfo.address" 
+                value={formData.content.personalInfo.address} 
+                onChange={handleChange} 
+                placeholder="Address"
+              />
+              <Input 
+                name="personalInfo.linkedin" 
+                value={formData.content.personalInfo.linkedin} 
+                onChange={handleChange} 
+                placeholder="LinkedIn URL"
+              />
+              <Input 
+                name="personalInfo.website" 
+                value={formData.content.personalInfo.website} 
+                onChange={handleChange} 
+                placeholder="Personal Website"
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="phone">Phone</Label>
-              <Input
-                id="phone"
-                value={formData.contact?.phone || ""}
-                onChange={(e) => handleInputChange(["contact", "phone"], e.target.value)}
-                placeholder="(123) 456-7890"
+          )}
+
+          {activeSection === 'summary' && (
+            <div className="space-y-4">
+              <h3 className="font-medium">Professional Summary</h3>
+              <Textarea 
+                name="summary" 
+                value={formData.content.summary} 
+                onChange={handleChange} 
+                placeholder="Write a professional summary"
+                rows={6}
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="location">Location</Label>
-              <Input
-                id="location"
-                value={formData.contact?.location || ""}
-                onChange={(e) => handleInputChange(["contact", "location"], e.target.value)}
-                placeholder="New York, NY"
-              />
-            </div>
-          </div>
+          )}
 
-          <div className="grid gap-2">
-            <Label htmlFor="summary">Professional Summary</Label>
-            <Textarea
-              id="summary"
-              value={formData.summary || ""}
-              onChange={(e) => handleInputChange(["summary"], e.target.value)}
-              placeholder="A brief summary of your professional background and goals"
-              rows={3}
-            />
-          </div>
-
-          <div className="grid gap-2">
-            <div className="flex items-center justify-between">
-              <Label>Experience</Label>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                type="button" 
-                onClick={handleAddExperience}
-                className="h-8"
-              >
-                <Plus className="h-3.5 w-3.5 mr-1" /> Add Position
-              </Button>
-            </div>
-            
-            {formData.experience?.map((exp: any, expIndex: number) => (
-              <div key={`exp-${expIndex}`} className="border rounded-md p-4 space-y-3">
-                <div className="flex justify-between items-start">
-                  <Label className="text-base font-medium">Position {expIndex + 1}</Label>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="text-destructive h-8" 
-                    onClick={() => handleRemoveExperience(expIndex)}
-                  >
-                    <Trash className="h-3.5 w-3.5 mr-1" /> Remove
-                  </Button>
-                </div>
-                
-                <div className="grid gap-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label htmlFor={`job-title-${expIndex}`}>Job Title</Label>
-                      <Input
-                        id={`job-title-${expIndex}`}
-                        value={exp.title}
-                        onChange={(e) => handleInputChange(["experience", expIndex, "title"], e.target.value)}
-                        placeholder="Software Engineer"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`job-dates-${expIndex}`}>Dates</Label>
-                      <Input
-                        id={`job-dates-${expIndex}`}
-                        value={exp.dates}
-                        onChange={(e) => handleInputChange(["experience", expIndex, "dates"], e.target.value)}
-                        placeholder="Jan 2020 - Present"
-                      />
-                    </div>
+          {activeSection === 'education' && (
+            <div className="space-y-6">
+              <h3 className="font-medium">Education</h3>
+              {formData.content.education.map((edu, index) => (
+                <div key={index} className="space-y-4 border rounded-lg p-4">
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-medium">Education #{index + 1}</h4>
+                    <Button 
+                      variant="destructive" 
+                      size="sm" 
+                      onClick={() => removeArrayItem('education', index)}
+                    >
+                      Remove
+                    </Button>
                   </div>
-                  
-                  <div>
-                    <Label htmlFor={`job-company-${expIndex}`}>Company</Label>
-                    <Input
-                      id={`job-company-${expIndex}`}
-                      value={exp.company}
-                      onChange={(e) => handleInputChange(["experience", expIndex, "company"], e.target.value)}
-                      placeholder="Company Name"
+                  <Input 
+                    value={edu.institution} 
+                    onChange={(e) => handleObjectArrayChange('education', index, 'institution', e.target.value)} 
+                    placeholder="Institution"
+                  />
+                  <Input 
+                    value={edu.degree} 
+                    onChange={(e) => handleObjectArrayChange('education', index, 'degree', e.target.value)} 
+                    placeholder="Degree"
+                  />
+                  <Input 
+                    value={edu.fieldOfStudy} 
+                    onChange={(e) => handleObjectArrayChange('education', index, 'fieldOfStudy', e.target.value)} 
+                    placeholder="Field of Study"
+                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <Input 
+                      value={edu.startDate} 
+                      onChange={(e) => handleObjectArrayChange('education', index, 'startDate', e.target.value)} 
+                      placeholder="Start Date"
+                    />
+                    <Input 
+                      value={edu.endDate} 
+                      onChange={(e) => handleObjectArrayChange('education', index, 'endDate', e.target.value)} 
+                      placeholder="End Date (or 'Present')"
                     />
                   </div>
+                  <Textarea 
+                    value={edu.description} 
+                    onChange={(e) => handleObjectArrayChange('education', index, 'description', e.target.value)} 
+                    placeholder="Description"
+                    rows={3}
+                  />
+                </div>
+              ))}
+              <Button 
+                onClick={() => addArrayItem('education', {
+                  id: String(formData.content.education.length + 1), // Convert to string to fix TypeScript error
+                  institution: '',
+                  degree: '',
+                  fieldOfStudy: '',
+                  startDate: '',
+                  endDate: '',
+                  description: ''
+                })}
+              >
+                Add Education
+              </Button>
+            </div>
+          )}
+
+          {activeSection === 'experience' && (
+            <div className="space-y-6">
+              <h3 className="font-medium">Work Experience</h3>
+              {formData.content.experience.map((exp, index) => (
+                <div key={index} className="space-y-4 border rounded-lg p-4">
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-medium">Experience #{index + 1}</h4>
+                    <Button 
+                      variant="destructive" 
+                      size="sm" 
+                      onClick={() => removeArrayItem('experience', index)}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                  <Input 
+                    value={exp.company} 
+                    onChange={(e) => handleObjectArrayChange('experience', index, 'company', e.target.value)} 
+                    placeholder="Company"
+                  />
+                  <Input 
+                    value={exp.position} 
+                    onChange={(e) => handleObjectArrayChange('experience', index, 'position', e.target.value)} 
+                    placeholder="Position"
+                  />
+                  <Input 
+                    value={exp.location} 
+                    onChange={(e) => handleObjectArrayChange('experience', index, 'location', e.target.value)} 
+                    placeholder="Location"
+                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <Input 
+                      value={exp.startDate} 
+                      onChange={(e) => handleObjectArrayChange('experience', index, 'startDate', e.target.value)} 
+                      placeholder="Start Date"
+                    />
+                    <Input 
+                      value={exp.endDate} 
+                      onChange={(e) => handleObjectArrayChange('experience', index, 'endDate', e.target.value)} 
+                      placeholder="End Date (or 'Present')"
+                    />
+                  </div>
+                  <Textarea 
+                    value={exp.description} 
+                    onChange={(e) => handleObjectArrayChange('experience', index, 'description', e.target.value)} 
+                    placeholder="Description"
+                    rows={3}
+                  />
                   
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <Label>Responsibilities & Achievements</Label>
+                  {/* Highlights/Achievements */}
+                  <h5 className="font-medium mt-2">Key Achievements</h5>
+                  {exp.highlights.map((highlight, hIndex) => (
+                    <div key={hIndex} className="flex items-center gap-2">
+                      <Input 
+                        value={highlight} 
+                        onChange={(e) => handleNestedArrayChange(
+                          'experience', index, 'highlights', hIndex, e.target.value
+                        )} 
+                        placeholder="Achievement"
+                      />
                       <Button 
                         variant="outline" 
-                        size="sm" 
-                        type="button" 
-                        onClick={() => handleAddBullet(expIndex)}
-                        className="h-8"
+                        size="icon" 
+                        onClick={() => removeNestedArrayItem(
+                          'experience', index, 'highlights', hIndex
+                        )}
                       >
-                        <Plus className="h-3.5 w-3.5 mr-1" /> Add Detail
+                        ×
                       </Button>
                     </div>
-                    
-                    {exp.bullets?.map((bullet: string, bulletIndex: number) => (
-                      <div key={`bullet-${expIndex}-${bulletIndex}`} className="flex items-center gap-2 mb-2">
-                        <Input
-                          value={bullet}
-                          onChange={(e) => {
-                            const newBullets = [...exp.bullets];
-                            newBullets[bulletIndex] = e.target.value;
-                            handleInputChange(["experience", expIndex, "bullets"], newBullets);
-                          }}
-                          placeholder="Describe an achievement or responsibility"
-                        />
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="text-destructive h-10 w-10 flex-shrink-0" 
-                          onClick={() => handleRemoveBullet(expIndex, bulletIndex)}
-                        >
-                          <Trash className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="grid gap-2">
-            <div className="flex items-center justify-between">
-              <Label>Education</Label>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                type="button" 
-                onClick={handleAddEducation}
-                className="h-8"
-              >
-                <Plus className="h-3.5 w-3.5 mr-1" /> Add Education
-              </Button>
-            </div>
-            
-            {formData.education?.map((edu: any, eduIndex: number) => (
-              <div key={`edu-${eduIndex}`} className="border rounded-md p-4 space-y-3">
-                <div className="flex justify-between items-start">
-                  <Label className="text-base font-medium">Education {eduIndex + 1}</Label>
+                  ))}
                   <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="text-destructive h-8" 
-                    onClick={() => handleRemoveEducation(eduIndex)}
+                    variant="outline" 
+                    onClick={() => addNestedArrayItem('experience', index, 'highlights')}
                   >
-                    <Trash className="h-3.5 w-3.5 mr-1" /> Remove
-                  </Button>
-                </div>
-                
-                <div className="grid gap-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label htmlFor={`edu-degree-${eduIndex}`}>Degree</Label>
-                      <Input
-                        id={`edu-degree-${eduIndex}`}
-                        value={edu.degree}
-                        onChange={(e) => handleInputChange(["education", eduIndex, "degree"], e.target.value)}
-                        placeholder="Bachelor of Science in Computer Science"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`edu-dates-${eduIndex}`}>Dates</Label>
-                      <Input
-                        id={`edu-dates-${eduIndex}`}
-                        value={edu.dates}
-                        onChange={(e) => handleInputChange(["education", eduIndex, "dates"], e.target.value)}
-                        placeholder="2016 - 2020"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor={`edu-institution-${eduIndex}`}>Institution</Label>
-                    <Input
-                      id={`edu-institution-${eduIndex}`}
-                      value={edu.institution}
-                      onChange={(e) => handleInputChange(["education", eduIndex, "institution"], e.target.value)}
-                      placeholder="University Name"
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="grid gap-2">
-            <div className="flex items-center justify-between">
-              <Label>Skills</Label>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                type="button" 
-                onClick={handleAddSkill}
-                className="h-8"
-              >
-                <Plus className="h-3.5 w-3.5 mr-1" /> Add Skill
-              </Button>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-              {formData.skills?.map((skill: string, skillIndex: number) => (
-                <div key={`skill-${skillIndex}`} className="flex items-center gap-2">
-                  <Input
-                    value={skill}
-                    onChange={(e) => {
-                      const newSkills = [...formData.skills];
-                      newSkills[skillIndex] = e.target.value;
-                      handleInputChange(["skills"], newSkills);
-                    }}
-                    placeholder="React"
-                  />
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="text-destructive h-10 w-10 flex-shrink-0" 
-                    onClick={() => handleRemoveSkill(skillIndex)}
-                  >
-                    <Trash className="h-4 w-4" />
+                    Add Achievement
                   </Button>
                 </div>
               ))}
+              <Button 
+                onClick={() => addArrayItem('experience', {
+                  id: String(formData.content.experience.length + 1), // Convert to string to fix TypeScript error
+                  company: '',
+                  position: '',
+                  location: '',
+                  startDate: '',
+                  endDate: '',
+                  description: '',
+                  highlights: ['']
+                })}
+              >
+                Add Experience
+              </Button>
             </div>
-          </div>
+          )}
+
+          {activeSection === 'skills' && (
+            <div className="space-y-4">
+              <h3 className="font-medium">Skills</h3>
+              {formData.content.skills.map((skill, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <Input 
+                    value={skill} 
+                    onChange={(e) => handleArrayChange('skills', index, e.target.value)} 
+                    placeholder="Skill"
+                  />
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    onClick={() => {
+                      const newSkills = [...formData.content.skills];
+                      if (newSkills.length > 1) {
+                        newSkills.splice(index, 1);
+                      } else {
+                        newSkills[0] = '';
+                      }
+                      setFormData({
+                        ...formData,
+                        content: {
+                          ...formData.content,
+                          skills: newSkills
+                        }
+                      });
+                    }}
+                  >
+                    ×
+                  </Button>
+                </div>
+              ))}
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setFormData({
+                    ...formData,
+                    content: {
+                      ...formData.content,
+                      skills: [...formData.content.skills, '']
+                    }
+                  });
+                }}
+              >
+                Add Skill
+              </Button>
+            </div>
+          )}
+
+          {activeSection === 'projects' && (
+            <div className="space-y-6">
+              <h3 className="font-medium">Projects</h3>
+              {formData.content.projects.map((project, index) => (
+                <div key={index} className="space-y-4 border rounded-lg p-4">
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-medium">Project #{index + 1}</h4>
+                    <Button 
+                      variant="destructive" 
+                      size="sm" 
+                      onClick={() => removeArrayItem('projects', index)}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                  <Input 
+                    value={project.name} 
+                    onChange={(e) => handleObjectArrayChange('projects', index, 'name', e.target.value)} 
+                    placeholder="Project Name"
+                  />
+                  <Input 
+                    value={project.url} 
+                    onChange={(e) => handleObjectArrayChange('projects', index, 'url', e.target.value)} 
+                    placeholder="Project URL (Optional)"
+                  />
+                  <Textarea 
+                    value={project.description} 
+                    onChange={(e) => handleObjectArrayChange('projects', index, 'description', e.target.value)} 
+                    placeholder="Project Description"
+                    rows={3}
+                  />
+                  
+                  {/* Project Highlights */}
+                  <h5 className="font-medium mt-2">Key Features/Contributions</h5>
+                  {project.highlights.map((highlight, hIndex) => (
+                    <div key={hIndex} className="flex items-center gap-2">
+                      <Input 
+                        value={highlight} 
+                        onChange={(e) => handleNestedArrayChange(
+                          'projects', index, 'highlights', hIndex, e.target.value
+                        )} 
+                        placeholder="Feature/Contribution"
+                      />
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        onClick={() => removeNestedArrayItem(
+                          'projects', index, 'highlights', hIndex
+                        )}
+                      >
+                        ×
+                      </Button>
+                    </div>
+                  ))}
+                  <Button 
+                    variant="outline" 
+                    onClick={() => addNestedArrayItem('projects', index, 'highlights')}
+                  >
+                    Add Feature
+                  </Button>
+                </div>
+              ))}
+              <Button 
+                onClick={() => addArrayItem('projects', {
+                  id: String(formData.content.projects.length + 1), // Convert to string to fix TypeScript error
+                  name: '',
+                  description: '',
+                  url: '',
+                  highlights: ['']
+                })}
+              >
+                Add Project
+              </Button>
+            </div>
+          )}
+
+          {activeSection === 'certifications' && (
+            <div className="space-y-6">
+              <h3 className="font-medium">Certifications</h3>
+              {formData.content.certifications.map((cert, index) => (
+                <div key={index} className="space-y-4 border rounded-lg p-4">
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-medium">Certification #{index + 1}</h4>
+                    <Button 
+                      variant="destructive" 
+                      size="sm" 
+                      onClick={() => removeArrayItem('certifications', index)}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                  <Input 
+                    value={cert.name} 
+                    onChange={(e) => handleObjectArrayChange('certifications', index, 'name', e.target.value)} 
+                    placeholder="Certification Name"
+                  />
+                  <Input 
+                    value={cert.issuer} 
+                    onChange={(e) => handleObjectArrayChange('certifications', index, 'issuer', e.target.value)} 
+                    placeholder="Issuing Organization"
+                  />
+                  <Input 
+                    value={cert.date} 
+                    onChange={(e) => handleObjectArrayChange('certifications', index, 'date', e.target.value)} 
+                    placeholder="Date Obtained"
+                  />
+                  <Textarea 
+                    value={cert.description} 
+                    onChange={(e) => handleObjectArrayChange('certifications', index, 'description', e.target.value)} 
+                    placeholder="Description (Optional)"
+                    rows={3}
+                  />
+                </div>
+              ))}
+              <Button 
+                onClick={() => addArrayItem('certifications', {
+                  id: String(formData.content.certifications.length + 1), // Convert to string to fix TypeScript error
+                  name: '',
+                  issuer: '',
+                  date: '',
+                  description: ''
+                })}
+              >
+                Add Certification
+              </Button>
+            </div>
+          )}
         </div>
         
-        <DialogFooter>
+        <div className="flex justify-end gap-2 mt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button type="button" onClick={handleSubmit} disabled={isSubmitting}>
-            {isSubmitting ? "Saving..." : initialData ? "Update Resume" : "Create Resume"}
+          <Button onClick={handleSubmit} disabled={isSubmitting}>
+            {isSubmitting ? 'Saving...' : 'Save Resume'}
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
