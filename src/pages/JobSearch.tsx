@@ -6,10 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Briefcase, Building2, Clock, ExternalLink, FileText, Link, MapPin, Search } from "lucide-react";
+import { Briefcase, Building2, Clock, ExternalLink, FileText, MapPin, Search } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { parseJobUrl, Resume, fetchResumes, optimizeResume, generateCoverLetter, OptimizeResumeParams, GenerateCoverLetterParams } from "@/services/documentService";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import axios from "axios";
+import { useQuery } from "@tanstack/react-query";
 
-// Sample job data
+// Sample job data for initial UI rendering
 const sampleJobs = [
   {
     id: "1",
@@ -19,8 +24,6 @@ const sampleJobs = [
     type: "Full-time",
     postedAt: "2 days ago",
     description: "We are looking for an experienced Frontend Developer to join our team...",
-    skills: ["React", "TypeScript", "Tailwind", "Next.js"],
-    salary: "$120,000 - $150,000",
     logo: "https://ui-avatars.com/api/?name=A&background=6366f1&color=fff"
   },
   {
@@ -31,23 +34,21 @@ const sampleJobs = [
     type: "Full-time",
     postedAt: "1 week ago",
     description: "As a Product Manager, you will be responsible for the product roadmap...",
-    skills: ["Product Strategy", "Agile", "User Research", "Analytics"],
-    salary: "$130,000 - $160,000",
     logo: "https://ui-avatars.com/api/?name=T&background=06b6d4&color=fff"
-  },
-  {
-    id: "3",
-    title: "UX/UI Designer",
-    company: "Startup.io",
-    location: "New York, NY",
-    type: "Full-time",
-    postedAt: "3 days ago",
-    description: "We're seeking a talented UX/UI Designer to create amazing user experiences...",
-    skills: ["Figma", "User Testing", "Interaction Design", "Prototyping"],
-    salary: "$110,000 - $140,000",
-    logo: "https://ui-avatars.com/api/?name=S&background=22c55e&color=fff"
   }
 ];
+
+// Job type interface
+interface Job {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  type: string;
+  postedAt: string;
+  description: string;
+  logo: string;
+}
 
 const JobSearch = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -55,19 +56,47 @@ const JobSearch = () => {
   const [location, setLocation] = useState("");
   const [jobType, setJobType] = useState("");
   const [isSearching, setIsSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState(sampleJobs);
-  const [selectedJob, setSelectedJob] = useState<(typeof sampleJobs)[0] | null>(null);
+  const [searchResults, setSearchResults] = useState<Job[]>(sampleJobs);
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [jobDescription, setJobDescription] = useState("");
+  const [isParsingUrl, setIsParsingUrl] = useState(false);
+  const [applicationDialogOpen, setApplicationDialogOpen] = useState(false);
+  const [selectedResumeId, setSelectedResumeId] = useState<string>("");
+  const [applicationOptions, setApplicationOptions] = useState({
+    generateResume: true,
+    generateCoverLetter: true
+  });
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [coverLetterDetails, setCoverLetterDetails] = useState({
+    userName: "",
+    company: "",
+    manager: "",
+    role: "",
+    referral: ""
+  });
   const { toast } = useToast();
+
+  // Fetch user's resumes
+  const { data: resumes = [] } = useQuery<Resume[]>({
+    queryKey: ['resumes'],
+    queryFn: fetchResumes,
+    onError: (error: any) => {
+      toast({
+        title: "Error loading resumes",
+        description: error?.message || "Failed to load your resumes",
+        variant: "destructive",
+      });
+    }
+  });
 
   const handleSearch = async () => {
     setIsSearching(true);
     
     try {
-      // Simulate search delay
+      // In a real implementation, this would call a jobs search API
+      // For now, we're just simulating with sample data
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // This would be replaced with actual API call to Serper or similar
-      // For now, just filter the sample data
       const filtered = sampleJobs.filter(job => 
         job.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
         job.company.toLowerCase().includes(searchQuery.toLowerCase())
@@ -81,10 +110,10 @@ const JobSearch = () => {
           description: "Try adjusting your search terms",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Search failed",
-        description: "There was an error performing your search",
+        description: error?.message || "There was an error performing your search",
         variant: "destructive",
       });
     } finally {
@@ -102,64 +131,121 @@ const JobSearch = () => {
       return;
     }
     
-    setIsSearching(true);
+    setIsParsingUrl(true);
     
     try {
-      // Simulate processing delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Call our job parsing service
+      const jobData = await parseJobUrl(jobUrl);
       
-      // This would be replaced with actual URL scraping and parsing
+      setJobDescription(jobData.jobDescription);
+      
+      // Create a job object from the parsed data
+      const parsedJob: Job = {
+        id: new Date().getTime().toString(),
+        title: jobData.jobTitle,
+        company: jobData.company,
+        location: "Unknown",
+        type: "Full-time",
+        postedAt: "Recently",
+        description: jobData.jobDescription,
+        logo: `https://ui-avatars.com/api/?name=${jobData.company.charAt(0)}&background=22c55e&color=fff`
+      };
+      
+      setSelectedJob(parsedJob);
+      
       toast({
         title: "Job parsed successfully",
         description: "The job listing has been analyzed",
       });
-      
-      // Show a random job from our sample as the "parsed" job
-      const randomJob = sampleJobs[Math.floor(Math.random() * sampleJobs.length)];
-      setSelectedJob(randomJob);
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Processing failed",
-        description: "Unable to parse job from the provided URL",
+        description: error?.message || "Unable to parse job from the provided URL",
         variant: "destructive",
       });
     } finally {
-      setIsSearching(false);
+      setIsParsingUrl(false);
     }
   };
   
-  const handleApplyToJob = (job: (typeof sampleJobs)[0]) => {
+  const handleApplyToJob = (job: Job) => {
     setSelectedJob(job);
-    toast({
-      title: "Job selected",
-      description: "Ready to create your application",
+    setJobDescription(job.description);
+    
+    // Pre-fill the cover letter details
+    setCoverLetterDetails({
+      ...coverLetterDetails,
+      company: job.company,
+      role: job.title
     });
+    
+    // Open the application dialog
+    setApplicationDialogOpen(true);
   };
 
   const handleGenerateApplication = async () => {
-    if (!selectedJob) return;
-    
-    try {
+    if (!selectedJob || !selectedResumeId) {
       toast({
-        title: "Generating application",
-        description: "Creating tailored resume and cover letter...",
-      });
-      
-      // Simulate generation delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      toast({
-        title: "Application ready",
-        description: "Your tailored resume and cover letter have been generated",
-      });
-      
-      // Here you would navigate to the application review page
-    } catch (error) {
-      toast({
-        title: "Generation failed",
-        description: "Unable to create application materials",
+        title: "Missing information",
+        description: "Please select a resume before proceeding",
         variant: "destructive",
       });
+      return;
+    }
+    
+    setIsGenerating(true);
+    
+    try {
+      let tailoredResume;
+      let coverLetter;
+      
+      // Generate tailored resume if selected
+      if (applicationOptions.generateResume) {
+        const params: OptimizeResumeParams = {
+          resumeId: selectedResumeId,
+          jobText: jobDescription
+        };
+        
+        if (jobUrl) {
+          params.jobUrl = jobUrl;
+        }
+        
+        tailoredResume = await optimizeResume(params);
+      }
+      
+      // Generate cover letter if selected
+      if (applicationOptions.generateCoverLetter) {
+        const params: GenerateCoverLetterParams = {
+          resumeId: selectedResumeId,
+          jobDescription: jobDescription,
+          userName: coverLetterDetails.userName,
+          company: coverLetterDetails.company || selectedJob.company,
+          manager: coverLetterDetails.manager,
+          role: coverLetterDetails.role || selectedJob.title,
+          referral: coverLetterDetails.referral
+        };
+        
+        coverLetter = await generateCoverLetter(params);
+      }
+      
+      // Close the dialog
+      setApplicationDialogOpen(false);
+      
+      toast({
+        title: "Application materials ready",
+        description: `Successfully created ${applicationOptions.generateResume ? 'a tailored resume' : ''}${applicationOptions.generateResume && applicationOptions.generateCoverLetter ? ' and ' : ''}${applicationOptions.generateCoverLetter ? 'a cover letter' : ''}`,
+      });
+      
+      // Here you would navigate to a page showing the generated materials
+      // For now, we'll just provide a success message
+    } catch (error: any) {
+      toast({
+        title: "Generation failed",
+        description: error?.message || "Failed to create application materials",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -257,21 +343,11 @@ const JobSearch = () => {
                               <span>Posted {job.postedAt}</span>
                             </div>
                           </div>
-                          <div className="flex flex-wrap gap-1 mt-3">
-                            {job.skills.map((skill, i) => (
-                              <span 
-                                key={i} 
-                                className="px-2 py-0.5 bg-secondary text-secondary-foreground rounded-full text-xs"
-                              >
-                                {skill}
-                              </span>
-                            ))}
-                          </div>
+                          <p className="text-sm mt-2">{job.description}</p>
                         </div>
                       </div>
                     </CardContent>
                     <CardFooter className="border-t px-6 py-3 bg-muted/30 flex justify-between">
-                      <span className="text-sm font-medium">{job.salary}</span>
                       <Button 
                         size="sm" 
                         onClick={() => handleApplyToJob(job)}
@@ -326,15 +402,11 @@ const JobSearch = () => {
                         <FileText className="h-4 w-4 text-primary" />
                         <span className="text-sm">Cover Letter</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Link className="h-4 w-4 text-primary" />
-                        <span className="text-sm">Application Tracking</span>
-                      </div>
                     </div>
                     
                     <Button 
                       className="w-full" 
-                      onClick={handleGenerateApplication}
+                      onClick={() => setApplicationDialogOpen(true)}
                     >
                       Generate Application
                     </Button>
@@ -359,10 +431,10 @@ const JobSearch = () => {
                 />
                 <Button 
                   className="rounded-l-none"
-                  disabled={isSearching}
+                  disabled={isParsingUrl}
                   onClick={handleUrlSearch}
                 >
-                  {isSearching ? "Processing..." : (
+                  {isParsingUrl ? "Processing..." : (
                     <>
                       <ExternalLink className="mr-2 h-4 w-4" />
                       Parse Job
@@ -401,18 +473,8 @@ const JobSearch = () => {
                         </div>
                       </div>
                       <p className="text-sm mt-2">{selectedJob.description}</p>
-                      <div className="flex flex-wrap gap-1 mt-3">
-                        {selectedJob.skills.map((skill, i) => (
-                          <span 
-                            key={i} 
-                            className="px-2 py-0.5 bg-secondary text-secondary-foreground rounded-full text-xs"
-                          >
-                            {skill}
-                          </span>
-                        ))}
-                      </div>
                       <div className="mt-4">
-                        <Button onClick={handleGenerateApplication}>
+                        <Button onClick={() => setApplicationDialogOpen(true)}>
                           Generate Application
                         </Button>
                       </div>
@@ -424,6 +486,158 @@ const JobSearch = () => {
           </div>
         </TabsContent>
       </Tabs>
+      
+      {/* Application Dialog */}
+      <Dialog open={applicationDialogOpen} onOpenChange={setApplicationDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Generate Application Materials</DialogTitle>
+            <DialogDescription>
+              Select options to create tailored application materials for {selectedJob?.title} at {selectedJob?.company}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {/* Resume Selection */}
+            <div>
+              <Label htmlFor="resume-select" className="text-base font-medium">Select Resume</Label>
+              {resumes.length > 0 ? (
+                <Select value={selectedResumeId} onValueChange={setSelectedResumeId}>
+                  <SelectTrigger className="mt-2">
+                    <SelectValue placeholder="Choose a resume" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {resumes.map(resume => (
+                      <SelectItem key={resume.id} value={resume.id}>
+                        {resume.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="bg-muted p-4 rounded-md mt-2">
+                  <p className="text-sm text-muted-foreground">You don't have any resumes uploaded. Please upload a resume first.</p>
+                </div>
+              )}
+            </div>
+            
+            {/* Job Description */}
+            <div>
+              <Label htmlFor="job-description" className="text-base font-medium">Job Description</Label>
+              <Textarea
+                id="job-description"
+                value={jobDescription}
+                onChange={(e) => setJobDescription(e.target.value)}
+                className="min-h-32 mt-2"
+                placeholder="Enter the job description here..."
+              />
+            </div>
+            
+            {/* Application Options */}
+            <div>
+              <h3 className="text-base font-medium mb-2">What would you like to generate?</h3>
+              <div className="flex gap-4">
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={applicationOptions.generateResume}
+                    onChange={(e) => setApplicationOptions({...applicationOptions, generateResume: e.target.checked})}
+                    className="rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <span>Tailored Resume</span>
+                </label>
+                
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={applicationOptions.generateCoverLetter}
+                    onChange={(e) => setApplicationOptions({...applicationOptions, generateCoverLetter: e.target.checked})}
+                    className="rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <span>Cover Letter</span>
+                </label>
+              </div>
+            </div>
+            
+            {/* Cover Letter Details (only show if cover letter is selected) */}
+            {applicationOptions.generateCoverLetter && (
+              <div className="space-y-4 border-t pt-4">
+                <h3 className="text-base font-medium">Cover Letter Details</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="userName">Your Full Name</Label>
+                    <Input
+                      id="userName"
+                      value={coverLetterDetails.userName}
+                      onChange={(e) => setCoverLetterDetails({...coverLetterDetails, userName: e.target.value})}
+                      className="mt-1"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="company">Company Name</Label>
+                    <Input
+                      id="company"
+                      value={coverLetterDetails.company}
+                      onChange={(e) => setCoverLetterDetails({...coverLetterDetails, company: e.target.value})}
+                      className="mt-1"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="role">Position/Role</Label>
+                    <Input
+                      id="role"
+                      value={coverLetterDetails.role}
+                      onChange={(e) => setCoverLetterDetails({...coverLetterDetails, role: e.target.value})}
+                      className="mt-1"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="manager">Hiring Manager (if known)</Label>
+                    <Input
+                      id="manager"
+                      value={coverLetterDetails.manager}
+                      onChange={(e) => setCoverLetterDetails({...coverLetterDetails, manager: e.target.value})}
+                      className="mt-1"
+                      placeholder="Optional"
+                    />
+                  </div>
+                  
+                  <div className="md:col-span-2">
+                    <Label htmlFor="referral">Referral (if any)</Label>
+                    <Input
+                      id="referral"
+                      value={coverLetterDetails.referral}
+                      onChange={(e) => setCoverLetterDetails({...coverLetterDetails, referral: e.target.value})}
+                      className="mt-1"
+                      placeholder="Optional"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setApplicationDialogOpen(false)}
+              disabled={isGenerating}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleGenerateApplication}
+              disabled={!selectedResumeId || isGenerating}
+            >
+              {isGenerating ? "Generating..." : "Generate"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

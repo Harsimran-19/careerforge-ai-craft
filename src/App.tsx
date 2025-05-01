@@ -14,7 +14,6 @@ import Register from "./pages/Register";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import Resumes from "./pages/Resumes";
-import CoverLetters from "./pages/CoverLetters";
 import JobSearch from "./pages/JobSearch";
 import Applications from "./pages/Applications";
 import Companies from "./pages/Companies";
@@ -67,7 +66,6 @@ const AppRoutes = () => {
       <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/resumes" element={<Resumes />} />
-        <Route path="/cover-letters" element={<CoverLetters />} />
         <Route path="/job-search" element={<JobSearch />} />
         <Route path="/applications" element={<Applications />} />
         <Route path="/companies" element={<Companies />} />
