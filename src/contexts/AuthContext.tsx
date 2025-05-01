@@ -2,7 +2,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 
 type AuthContextType = {
@@ -21,7 +21,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
+  const router = useRouter();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -46,7 +46,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
-      navigate('/login');
+      router.push('/login');
     } catch (error: any) {
       toast({
         title: "Error signing out",
@@ -65,7 +65,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       if (error) throw error;
       
-      navigate('/dashboard');
+      router.push('/dashboard');
       toast({
         title: "Welcome back!",
         description: "You've been successfully signed in.",
@@ -93,7 +93,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       if (error) throw error;
       
-      navigate('/dashboard');
+      router.push('/dashboard');
       toast({
         title: "Account created!",
         description: "You've been successfully signed up.",

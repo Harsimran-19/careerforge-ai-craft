@@ -1,7 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
-import { optimizeResumeAPI, generateCoverLetterAPI, CoverLetterResponse } from './apiService';
+import { optimizeResumeAPI, generateCoverLetterAPI, CoverLetterResponse, parseJobUrlAPI } from './apiService';
 
 // Resume Types
 export interface Resume {
@@ -18,7 +18,7 @@ export interface Resume {
 export interface CoverLetter {
   id: string;
   content: string;
-  job_title: string;
+  title: string; // Changed from job_title to title to match database schema
   company: string;
   created_at: string;
   user_id: string;
@@ -37,6 +37,23 @@ export interface TailoredResume {
 }
 
 // Resume Functions
+// Define a type that represents JSON data from Supabase
+type Json = string | number | boolean | null | { [key: string]: Json } | Json[];
+
+// Define a type that matches what actually comes from the database
+interface DbResume {
+  id: string;
+  title: string;
+  content: {
+    file_path: string;
+    file_url: string;
+    [key: string]: any;
+  };
+  created_at: string;
+  updated_at: string;
+  user_id: string;
+}
+
 export const fetchResumes = async (): Promise<Resume[]> => {
   const { data, error } = await supabase
     .from('resumes')
@@ -44,7 +61,22 @@ export const fetchResumes = async (): Promise<Resume[]> => {
     .order('created_at', { ascending: false });
 
   if (error) throw error;
-  return data as Resume[];
+  
+  // Transform database response to match the Resume interface
+  return (data as DbResume[]).map(item => {
+    // Extract file information from the content field
+    const content = item.content as { file_path?: string, file_url?: string } || {};
+    
+    return {
+      id: item.id,
+      title: item.title,
+      file_path: content.file_path || '',
+      file_url: content.file_url || '',
+      created_at: item.created_at,
+      updated_at: item.updated_at,
+      user_id: item.user_id
+    };
+  });
 };
 
 export const uploadResume = async (file: File, title: string): Promise<Resume> => {
@@ -66,20 +98,38 @@ export const uploadResume = async (file: File, title: string): Promise<Resume> =
     .from('resumes')
     .getPublicUrl(filePath);
 
-  // Save resume metadata to database
+  // Store file information in the content field as JSON
   const { data, error } = await supabase
     .from('resumes')
     .insert({
       title,
-      file_path: filePath,
-      file_url: publicUrl,
+      content: {
+        file_path: filePath,
+        file_url: publicUrl
+      },
       user_id: user.id
     })
     .select()
     .single();
 
   if (error) throw error;
-  return data as Resume;
+
+  // Ensure content exists and has expected properties
+  const content = data.content as { file_path: string, file_url: string };
+  if (!content) {
+    throw new Error('Resume content is missing');
+  }
+  
+  // Transform database response to match the Resume interface
+  return {
+    id: data.id,
+    title: data.title,
+    file_path: content.file_path,
+    file_url: content.file_url,
+    created_at: data.created_at,
+    updated_at: data.updated_at,
+    user_id: data.user_id
+  };
 };
 
 export const deleteResume = async (id: string): Promise<void> => {
@@ -92,11 +142,15 @@ export const deleteResume = async (id: string): Promise<void> => {
 
   if (fetchError) throw fetchError;
 
+  // Extract file path from content field
+  const content = resume.content as { file_path?: string } || {};
+  const filePath = content.file_path;
+
   // Delete from storage
-  if (resume.file_path) {
+  if (filePath) {
     const { error: storageError } = await supabase.storage
       .from('resumes')
-      .remove([resume.file_path]);
+      .remove([filePath]);
       
     if (storageError) throw storageError;
   }
@@ -138,16 +192,17 @@ export const optimizeResume = async (params: OptimizeResumeParams): Promise<stri
     .single();
     
   if (fetchError) throw fetchError;
-
+// Extract content with type assertion
+const content = resume.content as { file_path: string, file_url: string } || {};
   // Download the resume file from storage
   const { data: fileData, error: downloadError } = await supabase.storage
     .from('resumes')
-    .download(resume.file_path);
+    .download(content.file_path);
     
   if (downloadError) throw downloadError;
 
   // Convert to File object
-  const resumeFile = new File([fileData], resume.file_path.split('/').pop() || 'resume.pdf', { 
+  const resumeFile = new File([fileData], content.file_path.split('/').pop() || 'resume.pdf', { 
     type: 'application/pdf' 
   });
 
@@ -165,8 +220,8 @@ export const optimizeResume = async (params: OptimizeResumeParams): Promise<stri
     .insert({
       original_resume_id: resumeId,
       job_id: jobUrl || 'manual-entry',
-      file_path: resume.file_path, // For now, we're using the original file path
-      file_url: resume.file_url,   // And the original URL
+      file_path: content.file_path,
+      file_url: content.file_url,
       user_id: user.id
     })
     .select()
@@ -188,16 +243,17 @@ export const generateCoverLetter = async (params: GenerateCoverLetterParams): Pr
     .single();
     
   if (fetchError) throw fetchError;
-
+  // Extract content with type assertion
+  const content = resume.content as { file_path: string, file_url: string } || {};
   // Download the resume file from storage
   const { data: fileData, error: downloadError } = await supabase.storage
     .from('resumes')
-    .download(resume.file_path);
+    .download(content.file_path);
     
   if (downloadError) throw downloadError;
 
   // Convert to File object
-  const resumeFile = new File([fileData], resume.file_path.split('/').pop() || 'resume.pdf', { 
+  const resumeFile = new File([fileData], content.file_path.split('/').pop() || 'resume.pdf', { 
     type: 'application/pdf' 
   });
 
@@ -219,14 +275,13 @@ export const generateCoverLetter = async (params: GenerateCoverLetterParams): Pr
   // Save to database
   if (result.variations && result.variations.length > 0) {
     const { error } = await supabase
-      .from('cover_letters')
-      .insert({
-        content: result.variations[0].content,
-        job_title: role,
-        company: company,
-        user_id: user.id
-      });
-      
+  .from('cover_letters')
+  .insert({
+    content: result.variations[0].content,
+    title: role,  // Change from job_title to title
+    company: company,
+    user_id: user.id
+  });
     if (error) throw error;
   }
   

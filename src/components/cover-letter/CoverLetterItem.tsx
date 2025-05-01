@@ -75,7 +75,7 @@ const CoverLetterItem = ({ coverLetter, onEdit, onDelete }: CoverLetterItemProps
           </p>
           <div className="text-xs text-muted-foreground space-y-1">
             <p>Created: {formattedDate(coverLetter.created_at)}</p>
-            <p>Last updated: {formattedDate(coverLetter.updated_at)}</p>
+           
           </div>
           <div className="mt-4 flex gap-2">
             <Button variant="outline" size="sm" className="flex-1" onClick={() => onEdit(coverLetter)}>
