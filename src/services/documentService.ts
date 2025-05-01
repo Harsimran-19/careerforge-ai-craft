@@ -32,9 +32,18 @@ export const fetchResumes = async () => {
 };
 
 export const createResume = async (title: string, content: any) => {
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) throw new Error("User not authenticated");
+
   const { data, error } = await supabase
     .from('resumes')
-    .insert([{ title, content }])
+    .insert({
+      title,
+      content,
+      user_id: user.id
+    })
     .select()
     .single();
 
@@ -132,9 +141,18 @@ export const fetchCoverLetters = async () => {
 };
 
 export const createCoverLetter = async (title: string, content: string) => {
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) throw new Error("User not authenticated");
+
   const { data, error } = await supabase
     .from('cover_letters')
-    .insert([{ title, content }])
+    .insert({
+      title,
+      content,
+      user_id: user.id
+    })
     .select()
     .single();
 

@@ -216,7 +216,7 @@ const ResumeForm = ({ open, onOpenChange, initialData, onSave }: ResumeFormProps
             </div>
             
             {formData.experience?.map((exp: any, expIndex: number) => (
-              <div key={expIndex} className="border rounded-md p-4 space-y-3">
+              <div key={`exp-${expIndex}`} className="border rounded-md p-4 space-y-3">
                 <div className="flex justify-between items-start">
                   <Label className="text-base font-medium">Position {expIndex + 1}</Label>
                   <Button 
@@ -276,7 +276,7 @@ const ResumeForm = ({ open, onOpenChange, initialData, onSave }: ResumeFormProps
                     </div>
                     
                     {exp.bullets?.map((bullet: string, bulletIndex: number) => (
-                      <div key={bulletIndex} className="flex items-center gap-2 mb-2">
+                      <div key={`bullet-${expIndex}-${bulletIndex}`} className="flex items-center gap-2 mb-2">
                         <Input
                           value={bullet}
                           onChange={(e) => {
@@ -317,7 +317,7 @@ const ResumeForm = ({ open, onOpenChange, initialData, onSave }: ResumeFormProps
             </div>
             
             {formData.education?.map((edu: any, eduIndex: number) => (
-              <div key={eduIndex} className="border rounded-md p-4 space-y-3">
+              <div key={`edu-${eduIndex}`} className="border rounded-md p-4 space-y-3">
                 <div className="flex justify-between items-start">
                   <Label className="text-base font-medium">Education {eduIndex + 1}</Label>
                   <Button 
@@ -382,7 +382,7 @@ const ResumeForm = ({ open, onOpenChange, initialData, onSave }: ResumeFormProps
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
               {formData.skills?.map((skill: string, skillIndex: number) => (
-                <div key={skillIndex} className="flex items-center gap-2">
+                <div key={`skill-${skillIndex}`} className="flex items-center gap-2">
                   <Input
                     value={skill}
                     onChange={(e) => {
