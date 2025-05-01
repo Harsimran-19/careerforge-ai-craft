@@ -2,20 +2,17 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
-import { Briefcase, FileText, Home, Layout, LogOut, Menu, Search, Settings, User2 } from "lucide-react";
+import { Briefcase, FileText, Home, Layout, LogOut, Mail, Menu, Search, Settings, User2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const AppLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const { signOut } = useAuth();
 
   const isActiveRoute = (route: string) => {
     return pathname === route;
-  };
-
-  const handleLogout = () => {
-    // Placeholder for Supabase logout
-    navigate('/');
   };
 
   const NavItem = ({ icon: Icon, label, route }: { icon: any; label: string; route: string }) => (
@@ -53,6 +50,7 @@ const AppLayout = () => {
         <div className="flex-1 overflow-y-auto p-2 space-y-1">
           <NavItem icon={Home} label="Dashboard" route="/dashboard" />
           <NavItem icon={FileText} label="My Resumes" route="/resumes" />
+          <NavItem icon={Mail} label="Cover Letters" route="/cover-letters" />
           <NavItem icon={Briefcase} label="Job Applications" route="/applications" />
           <NavItem icon={Search} label="Job Search" route="/job-search" />
           <NavItem icon={Layout} label="Company Analysis" route="/companies" />
@@ -64,7 +62,7 @@ const AppLayout = () => {
           <Button 
             variant="ghost" 
             className="w-full justify-start gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-            onClick={handleLogout}
+            onClick={signOut}
           >
             <LogOut size={18} />
             {isSidebarOpen && <span>Logout</span>}
