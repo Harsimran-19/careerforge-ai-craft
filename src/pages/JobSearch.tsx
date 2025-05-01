@@ -8,11 +8,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Briefcase, Building2, Clock, ExternalLink, FileText, MapPin, Search } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { parseJobUrl, Resume, fetchResumes, optimizeResume, generateCoverLetter, OptimizeResumeParams, GenerateCoverLetterParams } from "@/services/documentService";
+import { Resume, fetchResumes, optimizeResume, generateCoverLetter, OptimizeResumeParams, GenerateCoverLetterParams, parseJobUrl } from "@/services/documentService";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
+import { toast as toastSonner } from "sonner";
 
 // Sample job data for initial UI rendering
 const sampleJobs = [
@@ -77,15 +77,17 @@ const JobSearch = () => {
   const { toast } = useToast();
 
   // Fetch user's resumes
-  const { data: resumes = [] } = useQuery<Resume[]>({
+  const { data: resumes = [] } = useQuery({
     queryKey: ['resumes'],
     queryFn: fetchResumes,
-    onError: (error: any) => {
-      toast({
-        title: "Error loading resumes",
-        description: error?.message || "Failed to load your resumes",
-        variant: "destructive",
-      });
+    onSettled: (data, error: any) => {
+      if (error) {
+        toast({
+          title: "Error loading resumes",
+          description: error?.message || "Failed to load your resumes",
+          variant: "destructive",
+        });
+      }
     }
   });
 
@@ -196,8 +198,8 @@ const JobSearch = () => {
     setIsGenerating(true);
     
     try {
-      let tailoredResume;
-      let coverLetter;
+      let tailoredResumeContent: string | undefined;
+      let coverLetterContent: string | undefined;
       
       // Generate tailored resume if selected
       if (applicationOptions.generateResume) {
@@ -210,7 +212,8 @@ const JobSearch = () => {
           params.jobUrl = jobUrl;
         }
         
-        tailoredResume = await optimizeResume(params);
+        tailoredResumeContent = await optimizeResume(params);
+        toastSonner.success("Tailored resume generated successfully");
       }
       
       // Generate cover letter if selected
@@ -225,19 +228,37 @@ const JobSearch = () => {
           referral: coverLetterDetails.referral
         };
         
-        coverLetter = await generateCoverLetter(params);
+        const response = await generateCoverLetter(params);
+        if (response.variations && response.variations.length > 0) {
+          coverLetterContent = response.variations[0].content;
+          toastSonner.success("Cover letter generated successfully");
+        }
       }
       
       // Close the dialog
       setApplicationDialogOpen(false);
       
+      // Show success toast
       toast({
         title: "Application materials ready",
         description: `Successfully created ${applicationOptions.generateResume ? 'a tailored resume' : ''}${applicationOptions.generateResume && applicationOptions.generateCoverLetter ? ' and ' : ''}${applicationOptions.generateCoverLetter ? 'a cover letter' : ''}`,
       });
       
       // Here you would navigate to a page showing the generated materials
-      // For now, we'll just provide a success message
+      // For now, we'll just display some success toasts with the content
+      if (tailoredResumeContent) {
+        toastSonner("Tailored Resume Preview", {
+          description: tailoredResumeContent.substring(0, 100) + "...",
+          duration: 5000,
+        });
+      }
+      
+      if (coverLetterContent) {
+        toastSonner("Cover Letter Preview", {
+          description: coverLetterContent.substring(0, 100) + "...",
+          duration: 5000,
+        });
+      }
     } catch (error: any) {
       toast({
         title: "Generation failed",
@@ -501,7 +522,7 @@ const JobSearch = () => {
             {/* Resume Selection */}
             <div>
               <Label htmlFor="resume-select" className="text-base font-medium">Select Resume</Label>
-              {resumes.length > 0 ? (
+              {resumes && resumes.length > 0 ? (
                 <Select value={selectedResumeId} onValueChange={setSelectedResumeId}>
                   <SelectTrigger className="mt-2">
                     <SelectValue placeholder="Choose a resume" />
