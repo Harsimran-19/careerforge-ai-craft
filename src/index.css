@@ -81,4 +81,31 @@
   .gradient-text {
     @apply bg-clip-text text-transparent bg-gradient-to-r from-careerforge-600 to-careerforge-400;
   }
+  
+  .container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+  
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .animate-hover-lift {
+    @apply transition-all duration-300;
+  }
+  
+  .animate-hover-lift:hover {
+    @apply -translate-y-1 shadow-md;
+  }
 }
