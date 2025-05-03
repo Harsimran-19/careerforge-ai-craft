@@ -82,7 +82,7 @@ const JobSearch = () => {
     queryFn: fetchResumes
   });
   
-  // Handle any errors from fetching resumes (using useEffect to avoid infinite renders)
+  // Handle any errors from fetching resumes
   useEffect(() => {
     if (resumeError) {
       toast({

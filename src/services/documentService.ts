@@ -18,7 +18,7 @@ export interface Resume {
 export interface CoverLetter {
   id: string;
   content: string;
-  title: string; // Changed from job_title to title to match database schema
+  title: string;
   company: string;
   created_at: string;
   user_id: string;
@@ -98,7 +98,7 @@ export const uploadResume = async (file: File, title: string): Promise<Resume> =
     .from('resumes')
     .getPublicUrl(filePath);
 
-  // Store file information in the content field as JSON
+  // Store file information in the database
   const { data, error } = await supabase
     .from('resumes')
     .insert({
@@ -113,14 +113,10 @@ export const uploadResume = async (file: File, title: string): Promise<Resume> =
     .single();
 
   if (error) throw error;
-
-  // Ensure content exists and has expected properties
-  const content = data.content as { file_path: string, file_url: string };
-  if (!content) {
-    throw new Error('Resume content is missing');
-  }
   
   // Transform database response to match the Resume interface
+  const content = data.content as { file_path: string, file_url: string };
+  
   return {
     id: data.id,
     title: data.title,
@@ -134,7 +130,7 @@ export const uploadResume = async (file: File, title: string): Promise<Resume> =
 
 export const deleteResume = async (id: string): Promise<void> => {
   // First get the resume to get the file path
-  const { data: resume, error: fetchError } = await supabase
+  const { data: resumeData, error: fetchError } = await supabase
     .from('resumes')
     .select('*')
     .eq('id', id)
@@ -143,8 +139,8 @@ export const deleteResume = async (id: string): Promise<void> => {
   if (fetchError) throw fetchError;
 
   // Extract file path from content field
-  const content = resume.content as { file_path?: string } || {};
-  const filePath = content.file_path;
+  const resume = resumeData as DbResume;
+  const filePath = resume.content.file_path;
 
   // Delete from storage
   if (filePath) {
@@ -185,15 +181,20 @@ export const optimizeResume = async (params: OptimizeResumeParams): Promise<stri
   const { resumeId, jobUrl, jobText } = params;
   
   // Get the original resume file
-  const { data: resume, error: fetchError } = await supabase
+  const { data: resumeData, error: fetchError } = await supabase
     .from('resumes')
     .select('*')
     .eq('id', resumeId)
     .single();
     
   if (fetchError) throw fetchError;
-// Extract content with type assertion
-const content = resume.content as { file_path: string, file_url: string } || {};
+  
+  // Convert to our type
+  const resume = resumeData as DbResume;
+  
+  // Extract content with type assertion
+  const content = resume.content;
+  
   // Download the resume file from storage
   const { data: fileData, error: downloadError } = await supabase.storage
     .from('resumes')
@@ -236,15 +237,20 @@ export const generateCoverLetter = async (params: GenerateCoverLetterParams): Pr
   const { resumeId, jobDescription, userName, company, manager, role, referral } = params;
   
   // Get the original resume file
-  const { data: resume, error: fetchError } = await supabase
+  const { data: resumeData, error: fetchError } = await supabase
     .from('resumes')
     .select('*')
     .eq('id', resumeId)
     .single();
     
   if (fetchError) throw fetchError;
+  
+  // Convert to our type
+  const resume = resumeData as DbResume;
+  
   // Extract content with type assertion
-  const content = resume.content as { file_path: string, file_url: string } || {};
+  const content = resume.content;
+  
   // Download the resume file from storage
   const { data: fileData, error: downloadError } = await supabase.storage
     .from('resumes')
@@ -275,13 +281,14 @@ export const generateCoverLetter = async (params: GenerateCoverLetterParams): Pr
   // Save to database
   if (result.variations && result.variations.length > 0) {
     const { error } = await supabase
-  .from('cover_letters')
-  .insert({
-    content: result.variations[0].content,
-    title: role,  // Change from job_title to title
-    company: company,
-    user_id: user.id
-  });
+      .from('cover_letters')
+      .insert({
+        content: result.variations[0].content,
+        title: role,
+        company: company,
+        user_id: user.id
+      });
+      
     if (error) throw error;
   }
   
