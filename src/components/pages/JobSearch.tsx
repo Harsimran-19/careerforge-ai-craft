@@ -1,4 +1,3 @@
-
 'use client';
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -46,7 +45,6 @@ const JobSearch = () => {
     
     try {
       // In a real implementation, this would call a jobs search API
-      // For now, we just simulate an API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Return empty array

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -15,7 +14,7 @@ import { Application } from "@/types";
 const emptyApplications: Application[] = [];
 
 const Applications = () => {
-  const [applications, setApplications] = useState<Application[]>(emptyApplications);
+  const [applications, setApplications] = useState<Application[]>([]);
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedApp, setExpandedApp] = useState<string | null>(null);

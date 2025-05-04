@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +12,7 @@ import { Company } from "@/types";
 const emptyCompanies: Company[] = [];
 
 const Companies = () => {
-  const [companies, setCompanies] = useState<Company[]>(emptyCompanies);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [companyUrl, setCompanyUrl] = useState("");
   const [isSearching, setIsSearching] = useState(false);
