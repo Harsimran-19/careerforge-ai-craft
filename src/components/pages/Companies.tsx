@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,12 +7,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Building2, ChevronDown, ExternalLink, SearchCheck } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Company } from "@/types";
 
 // Empty company data
-const emptyCompanies = [];
+const emptyCompanies: Company[] = [];
 
 const Companies = () => {
-  const [companies, setCompanies] = useState(emptyCompanies);
+  const [companies, setCompanies] = useState<Company[]>(emptyCompanies);
   const [searchQuery, setSearchQuery] = useState("");
   const [companyUrl, setCompanyUrl] = useState("");
   const [isSearching, setIsSearching] = useState(false);

@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -8,16 +9,17 @@ import { Switch } from "@/components/ui/switch";
 import { Building2, Briefcase, Calendar, CheckCircle, ChevronDown, Clock, FileText, Link2, MapPin } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { Application } from "@/types";
 
-// Empty application data
-const emptyApplications = [];
+// Define empty applications array with the correct type
+const emptyApplications: Application[] = [];
 
 const Applications = () => {
-  const [applications, setApplications] = useState(emptyApplications);
+  const [applications, setApplications] = useState<Application[]>(emptyApplications);
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedApp, setExpandedApp] = useState<string | null>(null);
-  const [selectedApp, setSelectedApp] = useState<any | null>(null);
+  const [selectedApp, setSelectedApp] = useState<Application | null>(null);
   const { toast } = useToast();
 
   const getStatusColor = (status: string) => {
@@ -73,10 +75,9 @@ const Applications = () => {
 
   // Filter applications based on status and search query
   const filteredApplications = applications.filter(app => {
-    if (!app) return false;
     const matchesStatus = statusFilter === "all" || app.status === statusFilter;
-    const matchesSearch = app.position?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          app.company?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = app.position.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          app.company.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesStatus && matchesSearch;
   });
 

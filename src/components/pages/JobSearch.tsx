@@ -1,18 +1,20 @@
+
 'use client';
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Briefcase, Search, ExternalLink } from "lucide-react";
+import { Briefcase, Search, ExternalLink, Building2, Clock, MapPin } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Resume, fetchResumes, optimizeResume, OptimizeResumeParams, parseJobUrl } from "@/services/documentService";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useQuery } from "@tanstack/react-query";
 import { toast as toastSonner } from "sonner";
+import { Job } from "@/types";
 
 const JobSearch = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -20,8 +22,8 @@ const JobSearch = () => {
   const [location, setLocation] = useState("");
   const [jobType, setJobType] = useState("");
   const [isSearching, setIsSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState([]);
-  const [selectedJob, setSelectedJob] = useState(null);
+  const [searchResults, setSearchResults] = useState<Job[]>([]);
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [jobDescription, setJobDescription] = useState("");
   const [isParsingUrl, setIsParsingUrl] = useState(false);
   const [applicationDialogOpen, setApplicationDialogOpen] = useState(false);
@@ -84,7 +86,7 @@ const JobSearch = () => {
       setJobDescription(jobData.jobDescription);
       
       // Create a job object from the parsed data
-      const parsedJob = {
+      const parsedJob: Job = {
         id: new Date().getTime().toString(),
         title: jobData.jobTitle,
         company: jobData.company,
@@ -112,7 +114,7 @@ const JobSearch = () => {
     }
   };
   
-  const handleApplyToJob = (job: any) => {
+  const handleApplyToJob = (job: Job) => {
     setSelectedJob(job);
     setJobDescription(job.description);
     setApplicationDialogOpen(true);
