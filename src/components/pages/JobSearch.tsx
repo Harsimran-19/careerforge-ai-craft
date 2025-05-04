@@ -1,30 +1,18 @@
 'use client';
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Briefcase, Building2, Clock, ExternalLink, FileText, MapPin, Search } from "lucide-react";
+import { Briefcase, Search, ExternalLink } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Resume, fetchResumes, optimizeResume, generateCoverLetter, OptimizeResumeParams, GenerateCoverLetterParams, parseJobUrl } from "@/services/documentService";
+import { Resume, fetchResumes, optimizeResume, OptimizeResumeParams, parseJobUrl } from "@/services/documentService";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useQuery } from "@tanstack/react-query";
 import { toast as toastSonner } from "sonner";
-
-// Job type interface
-interface Job {
-  id: string;
-  title: string;
-  company: string;
-  location: string;
-  type: string;
-  postedAt: string;
-  description: string;
-  logo: string;
-}
 
 const JobSearch = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -32,24 +20,17 @@ const JobSearch = () => {
   const [location, setLocation] = useState("");
   const [jobType, setJobType] = useState("");
   const [isSearching, setIsSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState<Job[]>([]);
-  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [searchResults, setSearchResults] = useState([]);
+  const [selectedJob, setSelectedJob] = useState(null);
   const [jobDescription, setJobDescription] = useState("");
   const [isParsingUrl, setIsParsingUrl] = useState(false);
   const [applicationDialogOpen, setApplicationDialogOpen] = useState(false);
   const [selectedResumeId, setSelectedResumeId] = useState<string>("");
   const [applicationOptions, setApplicationOptions] = useState({
     generateResume: true,
-    generateCoverLetter: true
+    generateCoverLetter: false
   });
   const [isGenerating, setIsGenerating] = useState(false);
-  const [coverLetterDetails, setCoverLetterDetails] = useState({
-    userName: "",
-    company: "",
-    manager: "",
-    role: "",
-    referral: ""
-  });
   const { toast } = useToast();
 
   // Fetch user's resumes
@@ -66,7 +47,7 @@ const JobSearch = () => {
       // For now, we just simulate an API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Return empty array for now (would be replaced by actual API call)
+      // Return empty array
       setSearchResults([]);
       
       toast({
@@ -97,13 +78,13 @@ const JobSearch = () => {
     setIsParsingUrl(true);
     
     try {
-      // Call our job parsing service
+      // Call job parsing service
       const jobData = await parseJobUrl(jobUrl);
       
       setJobDescription(jobData.jobDescription);
       
       // Create a job object from the parsed data
-      const parsedJob: Job = {
+      const parsedJob = {
         id: new Date().getTime().toString(),
         title: jobData.jobTitle,
         company: jobData.company,
@@ -131,18 +112,9 @@ const JobSearch = () => {
     }
   };
   
-  const handleApplyToJob = (job: Job) => {
+  const handleApplyToJob = (job: any) => {
     setSelectedJob(job);
     setJobDescription(job.description);
-    
-    // Pre-fill the cover letter details
-    setCoverLetterDetails({
-      ...coverLetterDetails,
-      company: job.company,
-      role: job.title
-    });
-    
-    // Open the application dialog
     setApplicationDialogOpen(true);
   };
 
@@ -159,9 +131,6 @@ const JobSearch = () => {
     setIsGenerating(true);
     
     try {
-      let tailoredResumeContent: string | undefined;
-      let coverLetterContent: string | undefined;
-      
       // Generate tailored resume if selected
       if (applicationOptions.generateResume) {
         const params: OptimizeResumeParams = {
@@ -173,27 +142,8 @@ const JobSearch = () => {
           params.jobUrl = jobUrl;
         }
         
-        tailoredResumeContent = await optimizeResume(params);
+        const tailoredResumeContent = await optimizeResume(params);
         toastSonner.success("Tailored resume generated successfully");
-      }
-      
-      // Generate cover letter if selected
-      if (applicationOptions.generateCoverLetter) {
-        const params: GenerateCoverLetterParams = {
-          resumeId: selectedResumeId,
-          jobDescription: jobDescription,
-          userName: coverLetterDetails.userName,
-          company: coverLetterDetails.company || selectedJob.company,
-          manager: coverLetterDetails.manager,
-          role: coverLetterDetails.role || selectedJob.title,
-          referral: coverLetterDetails.referral
-        };
-        
-        const response = await generateCoverLetter(params);
-        if (response.variations && response.variations.length > 0) {
-          coverLetterContent = response.variations[0].content;
-          toastSonner.success("Cover letter generated successfully");
-        }
       }
       
       // Close the dialog
@@ -202,23 +152,9 @@ const JobSearch = () => {
       // Show success toast
       toast({
         title: "Application materials ready",
-        description: `Successfully created ${applicationOptions.generateResume ? 'a tailored resume' : ''}${applicationOptions.generateResume && applicationOptions.generateCoverLetter ? ' and ' : ''}${applicationOptions.generateCoverLetter ? 'a cover letter' : ''}`,
+        description: `Successfully created a tailored resume for this job application`,
       });
       
-      // Here you would navigate to a page showing the generated materials
-      if (tailoredResumeContent) {
-        toastSonner("Tailored Resume Preview", {
-          description: tailoredResumeContent.substring(0, 100) + "...",
-          duration: 5000,
-        });
-      }
-      
-      if (coverLetterContent) {
-        toastSonner("Cover Letter Preview", {
-          description: coverLetterContent.substring(0, 100) + "...",
-          duration: 5000,
-        });
-      }
     } catch (error: any) {
       toast({
         title: "Generation failed",
@@ -292,107 +228,62 @@ const JobSearch = () => {
             )}
           </Button>
           
-          <div className="mt-8 grid lg:grid-cols-3 gap-6">
-            <div className={`lg:col-span-2 space-y-4 ${selectedJob ? 'block' : 'lg:col-span-3'}`}>
-              {searchResults.length > 0 ? (
-                searchResults.map((job) => (
-                  <Card key={job.id} className="overflow-hidden">
-                    <CardContent className="p-6">
-                      <div className="flex items-start gap-4">
-                        <img
-                          src={job.logo}
-                          alt={job.company}
-                          className="w-12 h-12 rounded-md"
-                        />
-                        <div className="flex-1 space-y-1">
-                          <h3 className="font-semibold">{job.title}</h3>
-                          <div className="flex items-center text-muted-foreground text-sm">
-                            <Building2 className="h-3.5 w-3.5 mr-1" />
-                            <span>{job.company}</span>
+          <div className="mt-8">
+            {searchResults.length > 0 ? (
+              <div className="grid lg:grid-cols-3 gap-6">
+                <div className={`lg:col-span-2 space-y-4 ${selectedJob ? 'block' : 'lg:col-span-3'}`}>
+                  {searchResults.map((job) => (
+                    <Card key={job.id} className="overflow-hidden">
+                      <CardContent className="p-6">
+                        <div className="flex items-start gap-4">
+                          <img
+                            src={job.logo}
+                            alt={job.company}
+                            className="w-12 h-12 rounded-md"
+                          />
+                          <div className="flex-1 space-y-1">
+                            <h3 className="font-semibold">{job.title}</h3>
+                            <div className="flex items-center text-muted-foreground text-sm">
+                              <Building2 className="h-3.5 w-3.5 mr-1" />
+                              <span>{job.company}</span>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                              <div className="flex items-center">
+                                <MapPin className="h-3 w-3 mr-1" />
+                                <span>{job.location}</span>
+                              </div>
+                              <div className="flex items-center">
+                                <Briefcase className="h-3 w-3 mr-1" />
+                                <span>{job.type}</span>
+                              </div>
+                              <div className="flex items-center">
+                                <Clock className="h-3 w-3 mr-1" />
+                                <span>Posted {job.postedAt}</span>
+                              </div>
+                            </div>
+                            <p className="text-sm mt-2">{job.description}</p>
                           </div>
-                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                            <div className="flex items-center">
-                              <MapPin className="h-3 w-3 mr-1" />
-                              <span>{job.location}</span>
-                            </div>
-                            <div className="flex items-center">
-                              <Briefcase className="h-3 w-3 mr-1" />
-                              <span>{job.type}</span>
-                            </div>
-                            <div className="flex items-center">
-                              <Clock className="h-3 w-3 mr-1" />
-                              <span>Posted {job.postedAt}</span>
-                            </div>
-                          </div>
-                          <p className="text-sm mt-2">{job.description}</p>
                         </div>
-                      </div>
-                    </CardContent>
-                    <CardFooter className="border-t px-6 py-3 bg-muted/30 flex justify-between">
-                      <Button 
-                        size="sm" 
-                        onClick={() => handleApplyToJob(job)}
-                      >
-                        Apply Now
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                ))
-              ) : (
-                <div className="flex flex-col items-center justify-center p-12 border rounded-lg">
-                  <Search className="h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-medium">No jobs found</h3>
-                  <p className="text-sm text-muted-foreground text-center max-w-md mt-1 mb-4">
-                    Try adjusting your search terms or filters to find more job opportunities
-                  </p>
+                      </CardContent>
+                      <CardFooter className="border-t px-6 py-3 bg-muted/30 flex justify-between">
+                        <Button 
+                          size="sm" 
+                          onClick={() => handleApplyToJob(job)}
+                        >
+                          Apply Now
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  ))}
                 </div>
-              )}
-            </div>
-            
-            {selectedJob && (
-              <div>
-                <Card className="sticky top-24">
-                  <CardContent className="p-6 space-y-4">
-                    <div className="text-center py-2">
-                      <h3 className="font-semibold">Generate Application</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Create tailored application materials for:
-                      </p>
-                    </div>
-                    
-                    <div className="border rounded-md p-3">
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={selectedJob.logo}
-                          alt={selectedJob.company}
-                          className="w-10 h-10 rounded-md"
-                        />
-                        <div>
-                          <h4 className="font-medium">{selectedJob.title}</h4>
-                          <p className="text-sm text-muted-foreground">{selectedJob.company}</p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-primary" />
-                        <span className="text-sm">Tailored Resume</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-primary" />
-                        <span className="text-sm">Cover Letter</span>
-                      </div>
-                    </div>
-                    
-                    <Button 
-                      className="w-full" 
-                      onClick={() => setApplicationDialogOpen(true)}
-                    >
-                      Generate Application
-                    </Button>
-                  </CardContent>
-                </Card>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center p-12 border rounded-lg">
+                <Search className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium">No jobs found</h3>
+                <p className="text-sm text-muted-foreground text-center max-w-md mt-1 mb-4">
+                  Try adjusting your search terms or filters to find more job opportunities
+                </p>
               </div>
             )}
           </div>
@@ -474,7 +365,7 @@ const JobSearch = () => {
           <DialogHeader>
             <DialogTitle>Generate Application Materials</DialogTitle>
             <DialogDescription>
-              Select options to create tailored application materials for {selectedJob?.title} at {selectedJob?.company}
+              Select options to create tailored application materials
             </DialogDescription>
           </DialogHeader>
           
@@ -488,7 +379,7 @@ const JobSearch = () => {
                     <SelectValue placeholder="Choose a resume" />
                   </SelectTrigger>
                   <SelectContent>
-                    {resumes.map(resume => (
+                    {resumes.map((resume: Resume) => (
                       <SelectItem key={resume.id} value={resume.id}>
                         {resume.title}
                       </SelectItem>
@@ -527,79 +418,8 @@ const JobSearch = () => {
                   />
                   <span>Tailored Resume</span>
                 </label>
-                
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={applicationOptions.generateCoverLetter}
-                    onChange={(e) => setApplicationOptions({...applicationOptions, generateCoverLetter: e.target.checked})}
-                    className="rounded border-gray-300 text-primary focus:ring-primary"
-                  />
-                  <span>Cover Letter</span>
-                </label>
               </div>
             </div>
-            
-            {/* Cover Letter Details (only show if cover letter is selected) */}
-            {applicationOptions.generateCoverLetter && (
-              <div className="space-y-4 border-t pt-4">
-                <h3 className="text-base font-medium">Cover Letter Details</h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="userName">Your Full Name</Label>
-                    <Input
-                      id="userName"
-                      value={coverLetterDetails.userName}
-                      onChange={(e) => setCoverLetterDetails({...coverLetterDetails, userName: e.target.value})}
-                      className="mt-1"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="company">Company Name</Label>
-                    <Input
-                      id="company"
-                      value={coverLetterDetails.company}
-                      onChange={(e) => setCoverLetterDetails({...coverLetterDetails, company: e.target.value})}
-                      className="mt-1"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="role">Position/Role</Label>
-                    <Input
-                      id="role"
-                      value={coverLetterDetails.role}
-                      onChange={(e) => setCoverLetterDetails({...coverLetterDetails, role: e.target.value})}
-                      className="mt-1"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="manager">Hiring Manager (if known)</Label>
-                    <Input
-                      id="manager"
-                      value={coverLetterDetails.manager}
-                      onChange={(e) => setCoverLetterDetails({...coverLetterDetails, manager: e.target.value})}
-                      className="mt-1"
-                      placeholder="Optional"
-                    />
-                  </div>
-                  
-                  <div className="md:col-span-2">
-                    <Label htmlFor="referral">Referral (if any)</Label>
-                    <Input
-                      id="referral"
-                      value={coverLetterDetails.referral}
-                      onChange={(e) => setCoverLetterDetails({...coverLetterDetails, referral: e.target.value})}
-                      className="mt-1"
-                      placeholder="Optional"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
           
           <DialogFooter>

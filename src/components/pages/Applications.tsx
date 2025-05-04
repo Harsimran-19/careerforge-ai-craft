@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -10,64 +9,15 @@ import { Building2, Briefcase, Calendar, CheckCircle, ChevronDown, Clock, FileTe
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 
-// Sample application data
-const sampleApplications = [
-  {
-    id: "1",
-    position: "Senior Frontend Developer",
-    company: "Acme Inc",
-    location: "San Francisco, CA",
-    appliedDate: "2025-04-20",
-    status: "Applied",
-    notes: "Applied through their careers page. Used tailored resume version 2.",
-    nextStep: "Follow up in one week if no response",
-    resumeUrl: "#",
-    coverLetterUrl: "#",
-    jobUrl: "https://example.com/job/1",
-    hasInterview: false,
-    interviewDate: null,
-    logo: "https://ui-avatars.com/api/?name=A&background=6366f1&color=fff"
-  },
-  {
-    id: "2",
-    position: "UX Designer",
-    company: "TechCorp",
-    location: "Remote",
-    appliedDate: "2025-04-15",
-    status: "Interview",
-    notes: "Had initial screening call with HR on April 18. Technical interview scheduled.",
-    nextStep: "Prepare portfolio presentation",
-    resumeUrl: "#",
-    coverLetterUrl: "#",
-    jobUrl: "https://example.com/job/2",
-    hasInterview: true,
-    interviewDate: "2025-04-25",
-    logo: "https://ui-avatars.com/api/?name=T&background=06b6d4&color=fff"
-  },
-  {
-    id: "3",
-    position: "Product Manager",
-    company: "Startup.io",
-    location: "New York, NY",
-    appliedDate: "2025-04-10",
-    status: "Offered",
-    notes: "Received offer on April 22. Base salary: $140K with 15% bonus and good benefits.",
-    nextStep: "Review offer letter and respond by April 29",
-    resumeUrl: "#",
-    coverLetterUrl: "#",
-    jobUrl: "https://example.com/job/3",
-    hasInterview: true,
-    interviewDate: "2025-04-18",
-    logo: "https://ui-avatars.com/api/?name=S&background=22c55e&color=fff"
-  }
-];
+// Empty application data
+const emptyApplications = [];
 
 const Applications = () => {
-  const [applications, setApplications] = useState(sampleApplications);
+  const [applications, setApplications] = useState(emptyApplications);
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedApp, setExpandedApp] = useState<string | null>(null);
-  const [selectedApp, setSelectedApp] = useState<(typeof sampleApplications)[0] | null>(null);
+  const [selectedApp, setSelectedApp] = useState<any | null>(null);
   const { toast } = useToast();
 
   const getStatusColor = (status: string) => {
@@ -123,9 +73,10 @@ const Applications = () => {
 
   // Filter applications based on status and search query
   const filteredApplications = applications.filter(app => {
+    if (!app) return false;
     const matchesStatus = statusFilter === "all" || app.status === statusFilter;
-    const matchesSearch = app.position.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          app.company.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = app.position?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          app.company?.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesStatus && matchesSearch;
   });
 
