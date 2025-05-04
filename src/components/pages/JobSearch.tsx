@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,30 +13,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Textarea } from "@/components/ui/textarea";
 import { useQuery } from "@tanstack/react-query";
 import { toast as toastSonner } from "sonner";
-
-// Sample job data for initial UI rendering
-const sampleJobs = [
-  {
-    id: "1",
-    title: "Senior Frontend Developer",
-    company: "Acme Inc",
-    location: "San Francisco, CA",
-    type: "Full-time",
-    postedAt: "2 days ago",
-    description: "We are looking for an experienced Frontend Developer to join our team...",
-    logo: "https://ui-avatars.com/api/?name=A&background=6366f1&color=fff"
-  },
-  {
-    id: "2",
-    title: "Product Manager",
-    company: "TechCorp",
-    location: "Remote",
-    type: "Full-time",
-    postedAt: "1 week ago",
-    description: "As a Product Manager, you will be responsible for the product roadmap...",
-    logo: "https://ui-avatars.com/api/?name=T&background=06b6d4&color=fff"
-  }
-];
 
 // Job type interface
 interface Job {
@@ -56,7 +32,7 @@ const JobSearch = () => {
   const [location, setLocation] = useState("");
   const [jobType, setJobType] = useState("");
   const [isSearching, setIsSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState<Job[]>(sampleJobs);
+  const [searchResults, setSearchResults] = useState<Job[]>([]);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [jobDescription, setJobDescription] = useState("");
   const [isParsingUrl, setIsParsingUrl] = useState(false);
@@ -77,43 +53,26 @@ const JobSearch = () => {
   const { toast } = useToast();
 
   // Fetch user's resumes
-  const { data: resumes = [], error: resumeError } = useQuery({
+  const { data: resumes = [] } = useQuery({
     queryKey: ['resumes'],
     queryFn: fetchResumes
   });
-  
-  // Handle any errors from fetching resumes
-  useEffect(() => {
-    if (resumeError) {
-      toast({
-        title: "Error loading resumes",
-        description: (resumeError as any)?.message || "Failed to load your resumes",
-        variant: "destructive",
-      });
-    }
-  }, [resumeError, toast]);
 
   const handleSearch = async () => {
     setIsSearching(true);
     
     try {
       // In a real implementation, this would call a jobs search API
-      // For now, we're just simulating with sample data
+      // For now, we just simulate an API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      const filtered = sampleJobs.filter(job => 
-        job.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        job.company.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+      // Return empty array for now (would be replaced by actual API call)
+      setSearchResults([]);
       
-      setSearchResults(filtered);
-      
-      if (filtered.length === 0) {
-        toast({
-          title: "No results found",
-          description: "Try adjusting your search terms",
-        });
-      }
+      toast({
+        title: "No results found",
+        description: "Try adjusting your search terms",
+      });
     } catch (error: any) {
       toast({
         title: "Search failed",
@@ -247,7 +206,6 @@ const JobSearch = () => {
       });
       
       // Here you would navigate to a page showing the generated materials
-      // For now, we'll just display some success toasts with the content
       if (tailoredResumeContent) {
         toastSonner("Tailored Resume Preview", {
           description: tailoredResumeContent.substring(0, 100) + "...",
