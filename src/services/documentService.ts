@@ -1,13 +1,59 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
 import { Json } from '@/integrations/supabase/types';
+
+// Define more specific types for the resume content structure
+export interface ResumeContent {
+  personalInfo: {
+    name: string;
+    email: string;
+    phone: string;
+    address: string;
+    linkedin: string;
+    website: string;
+  };
+  summary: string;
+  education: {
+    id: string;
+    institution: string;
+    degree: string;
+    fieldOfStudy: string;
+    startDate: string;
+    endDate: string;
+    description: string;
+  }[];
+  experience: {
+    id: string;
+    company: string;
+    position: string;
+    location: string;
+    startDate: string;
+    endDate: string;
+    description: string;
+    highlights: string[];
+  }[];
+  skills: string[];
+  certifications: {
+    id: string;
+    name: string;
+    issuer: string;
+    date: string;
+    description: string;
+  }[];
+  projects: {
+    id: string;
+    name: string;
+    description: string;
+    url: string;
+    highlights: string[];
+  }[];
+}
 
 // Types that match the Supabase database schema
 export interface Resume {
   id: string;
   title: string;
-  content: Json; // JSON content from database
+  content: ResumeContent;
   created_at: string;
   updated_at: string;
   user_id: string;
@@ -43,7 +89,14 @@ export const fetchResumes = async (): Promise<Resume[]> => {
     .order('created_at', { ascending: false });
 
   if (error) throw error;
-  return data as Resume[];
+  
+  // Ensure the content is properly structured
+  return (data as Resume[]).map(resume => ({
+    ...resume,
+    content: typeof resume.content === 'string' 
+      ? JSON.parse(resume.content) 
+      : resume.content
+  }));
 };
 
 // Add the missing uploadResume function that's being imported in Resumes.tsx
@@ -88,7 +141,7 @@ export const uploadResume = async (file: File, title: string): Promise<Resume> =
   return data as Resume;
 };
 
-export const uploadResumeContent = async (title: string, content: any): Promise<Resume> => {
+export const uploadResumeContent = async (title: string, content: ResumeContent): Promise<Resume> => {
   // Get current user
   const { data: { user } } = await supabase.auth.getUser();
   

@@ -4,13 +4,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Resume } from '@/services/documentService';
+import { Resume, ResumeContent } from '@/services/documentService';
 
 interface ResumeFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialData?: Resume;
-  onSave: (data: any) => Promise<void>;
+  onSave: (data: { title: string; content: ResumeContent }) => Promise<void>;
 }
 
 const ResumeForm: React.FC<ResumeFormProps> = ({ 
@@ -19,61 +19,68 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
   initialData,
   onSave
 }) => {
-  const [formData, setFormData] = useState({
-    title: initialData?.title || '',
-    content: initialData?.content || {
-      personalInfo: {
+  // Create default structure for new resume
+  const defaultContent: ResumeContent = {
+    personalInfo: {
+      name: '',
+      email: '',
+      phone: '',
+      address: '',
+      linkedin: '',
+      website: ''
+    },
+    summary: '',
+    education: [
+      {
+        id: '1',
+        institution: '',
+        degree: '',
+        fieldOfStudy: '',
+        startDate: '',
+        endDate: '',
+        description: ''
+      }
+    ],
+    experience: [
+      {
+        id: '1',
+        company: '',
+        position: '',
+        location: '',
+        startDate: '',
+        endDate: '',
+        description: '',
+        highlights: ['']
+      }
+    ],
+    skills: [''],
+    certifications: [
+      {
+        id: '1',
         name: '',
-        email: '',
-        phone: '',
-        address: '',
-        linkedin: '',
-        website: ''
-      },
-      summary: '',
-      education: [
-        {
-          id: '1',
-          institution: '',
-          degree: '',
-          fieldOfStudy: '',
-          startDate: '',
-          endDate: '',
-          description: ''
-        }
-      ],
-      experience: [
-        {
-          id: '1',
-          company: '',
-          position: '',
-          location: '',
-          startDate: '',
-          endDate: '',
-          description: '',
-          highlights: ['']
-        }
-      ],
-      skills: [''],
-      certifications: [
-        {
-          id: '1',
-          name: '',
-          issuer: '',
-          date: '',
-          description: ''
-        }
-      ],
-      projects: [
-        {
-          id: '1',
-          name: '',
-          description: '',
-          url: '',
-          highlights: ['']
-        }
-      ]
-    }
+        issuer: '',
+        date: '',
+        description: ''
+      }
+    ],
+    projects: [
+      {
+        id: '1',
+        name: '',
+        description: '',
+        url: '',
+        highlights: ['']
+      }
+    ]
+  };
+
+  // Initialize form data with initial data or defaults
+  const [formData, setFormData] = useState<{
+    title: string;
+    content: ResumeContent;
+  }>({
+    title: initialData?.title || '',
+    content: initialData?.content || defaultContent
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -88,7 +95,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
         content: {
           ...formData.content,
           [section]: {
-            ...formData.content[section],
+            ...formData.content[section as keyof ResumeContent],
             [field]: value
           }
         }
@@ -101,21 +108,23 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
     }
   };
 
-  const handleArrayChange = (section: string, index: number, value: string) => {
-    const newArray = [...formData.content[section]];
-    newArray[index] = value;
-
-    setFormData({
-      ...formData,
-      content: {
-        ...formData.content,
-        [section]: newArray
-      }
-    });
+  const handleArrayChange = (section: keyof ResumeContent, index: number, value: string) => {
+    if (section === 'skills') {
+      const newSkills = [...formData.content.skills];
+      newSkills[index] = value;
+      
+      setFormData({
+        ...formData,
+        content: {
+          ...formData.content,
+          skills: newSkills
+        }
+      });
+    }
   };
 
   const handleObjectArrayChange = (
-    section: string, 
+    section: 'education' | 'experience' | 'certifications' | 'projects', 
     index: number, 
     field: string, 
     value: string
@@ -135,7 +144,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
     });
   };
 
-  const addArrayItem = (section: string, template: any) => {
+  const addArrayItem = (section: 'education' | 'experience' | 'certifications' | 'projects', template: any) => {
     const newArray = [...formData.content[section]];
     
     // Find the highest ID in the current array items
@@ -147,7 +156,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
     // Create new item with incremented ID
     const newItem = {
       ...template,
-      id: String(maxId + 1) // Convert to string to fix TypeScript error
+      id: String(maxId + 1)
     };
     
     newArray.push(newItem);
@@ -161,7 +170,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
     });
   };
 
-  const removeArrayItem = (section: string, index: number) => {
+  const removeArrayItem = (section: 'education' | 'experience' | 'certifications' | 'projects', index: number) => {
     const newArray = [...formData.content[section]];
     newArray.splice(index, 1);
     
@@ -169,7 +178,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
     if (newArray.length === 0) {
       if (section === 'education') {
         newArray.push({
-          id: '1', // Convert to string to fix TypeScript error
+          id: '1',
           institution: '',
           degree: '',
           fieldOfStudy: '',
@@ -179,7 +188,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
         });
       } else if (section === 'experience') {
         newArray.push({
-          id: '1', // Convert to string to fix TypeScript error
+          id: '1',
           company: '',
           position: '',
           location: '',
@@ -190,7 +199,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
         });
       } else if (section === 'certifications') {
         newArray.push({
-          id: '1', // Convert to string to fix TypeScript error
+          id: '1',
           name: '',
           issuer: '',
           date: '',
@@ -198,7 +207,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
         });
       } else if (section === 'projects') {
         newArray.push({
-          id: '1', // Convert to string to fix TypeScript error
+          id: '1',
           name: '',
           description: '',
           url: '',
@@ -216,9 +225,18 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
     });
   };
 
-  const addNestedArrayItem = (section: string, index: number, subField: string) => {
+  const addNestedArrayItem = (
+    section: 'experience' | 'projects', 
+    index: number, 
+    subField: 'highlights'
+  ) => {
     const newArray = [...formData.content[section]];
-    newArray[index][subField] = [...newArray[index][subField], ''];
+    const itemHighlights = [...newArray[index][subField], ''];
+    
+    newArray[index] = {
+      ...newArray[index],
+      [subField]: itemHighlights
+    };
     
     setFormData({
       ...formData,
@@ -229,14 +247,25 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
     });
   };
 
-  const removeNestedArrayItem = (section: string, index: number, subField: string, subIndex: number) => {
+  const removeNestedArrayItem = (
+    section: 'experience' | 'projects', 
+    index: number, 
+    subField: 'highlights', 
+    subIndex: number
+  ) => {
     const newArray = [...formData.content[section]];
+    const highlights = [...newArray[index][subField]];
     
-    if (newArray[index][subField].length > 1) {
-      newArray[index][subField].splice(subIndex, 1);
+    if (highlights.length > 1) {
+      highlights.splice(subIndex, 1);
     } else {
-      newArray[index][subField] = [''];
+      highlights[0] = '';
     }
+    
+    newArray[index] = {
+      ...newArray[index],
+      [subField]: highlights
+    };
     
     setFormData({
       ...formData,
@@ -248,14 +277,20 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
   };
 
   const handleNestedArrayChange = (
-    section: string, 
+    section: 'experience' | 'projects', 
     index: number, 
-    subField: string, 
+    subField: 'highlights', 
     subIndex: number, 
     value: string
   ) => {
     const newArray = [...formData.content[section]];
-    newArray[index][subField][subIndex] = value;
+    const highlights = [...newArray[index][subField]];
+    highlights[subIndex] = value;
+    
+    newArray[index] = {
+      ...newArray[index],
+      [subField]: highlights
+    };
     
     setFormData({
       ...formData,
@@ -286,7 +321,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
         </DialogHeader>
         
         <div className="space-y-4">
-          <div className="flex gap-2 mb-4">
+          <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
             <Button 
               size="sm" 
               variant={activeSection === 'personalInfo' ? 'default' : 'outline'} 
@@ -348,6 +383,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
             />
           </div>
 
+          {/* Personal Information Section */}
           {activeSection === 'personalInfo' && (
             <div className="space-y-4">
               <h3 className="font-medium">Personal Information</h3>
@@ -390,6 +426,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
             </div>
           )}
 
+          {/* Summary Section */}
           {activeSection === 'summary' && (
             <div className="space-y-4">
               <h3 className="font-medium">Professional Summary</h3>
@@ -403,6 +440,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
             </div>
           )}
 
+          {/* Education Section */}
           {activeSection === 'education' && (
             <div className="space-y-6">
               <h3 className="font-medium">Education</h3>
@@ -455,7 +493,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
               ))}
               <Button 
                 onClick={() => addArrayItem('education', {
-                  id: String(formData.content.education.length + 1), // Convert to string to fix TypeScript error
+                  id: String(formData.content.education.length + 1),
                   institution: '',
                   degree: '',
                   fieldOfStudy: '',
@@ -469,6 +507,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
             </div>
           )}
 
+          {/* Experience Section */}
           {activeSection === 'experience' && (
             <div className="space-y-6">
               <h3 className="font-medium">Work Experience</h3>
@@ -550,7 +589,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
               ))}
               <Button 
                 onClick={() => addArrayItem('experience', {
-                  id: String(formData.content.experience.length + 1), // Convert to string to fix TypeScript error
+                  id: String(formData.content.experience.length + 1),
                   company: '',
                   position: '',
                   location: '',
@@ -565,6 +604,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
             </div>
           )}
 
+          {/* Skills Section */}
           {activeSection === 'skills' && (
             <div className="space-y-4">
               <h3 className="font-medium">Skills</h3>
@@ -615,6 +655,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
             </div>
           )}
 
+          {/* Projects Section */}
           {activeSection === 'projects' && (
             <div className="space-y-6">
               <h3 className="font-medium">Projects</h3>
@@ -679,7 +720,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
               ))}
               <Button 
                 onClick={() => addArrayItem('projects', {
-                  id: String(formData.content.projects.length + 1), // Convert to string to fix TypeScript error
+                  id: String(formData.content.projects.length + 1),
                   name: '',
                   description: '',
                   url: '',
@@ -691,6 +732,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
             </div>
           )}
 
+          {/* Certifications Section */}
           {activeSection === 'certifications' && (
             <div className="space-y-6">
               <h3 className="font-medium">Certifications</h3>
@@ -731,7 +773,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
               ))}
               <Button 
                 onClick={() => addArrayItem('certifications', {
-                  id: String(formData.content.certifications.length + 1), // Convert to string to fix TypeScript error
+                  id: String(formData.content.certifications.length + 1),
                   name: '',
                   issuer: '',
                   date: '',

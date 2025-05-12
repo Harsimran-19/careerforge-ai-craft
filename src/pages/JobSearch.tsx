@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
@@ -77,15 +76,17 @@ const JobSearch = () => {
   const { toast } = useToast();
 
   // Fetch user's resumes
-  const { data: resumes = [] } = useQuery<Resume[]>({
+  const { data: resumes = [] } = useQuery({
     queryKey: ['resumes'],
     queryFn: fetchResumes,
-    onError: (error: any) => {
-      toast({
-        title: "Error loading resumes",
-        description: error?.message || "Failed to load your resumes",
-        variant: "destructive",
-      });
+    meta: {
+      onError: (error: any) => {
+        toast({
+          title: "Error loading resumes",
+          description: error?.message || "Failed to load your resumes",
+          variant: "destructive",
+        });
+      }
     }
   });
 
