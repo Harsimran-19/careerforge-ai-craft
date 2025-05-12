@@ -9,6 +9,78 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      applications: {
+        Row: {
+          applied_date: string | null
+          company: string
+          cover_letter_id: string | null
+          created_at: string | null
+          has_interview: boolean | null
+          id: string
+          interview_date: string | null
+          job_url: string | null
+          location: string | null
+          next_step: string | null
+          notes: string | null
+          position: string
+          resume_id: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          applied_date?: string | null
+          company: string
+          cover_letter_id?: string | null
+          created_at?: string | null
+          has_interview?: boolean | null
+          id?: string
+          interview_date?: string | null
+          job_url?: string | null
+          location?: string | null
+          next_step?: string | null
+          notes?: string | null
+          position: string
+          resume_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          applied_date?: string | null
+          company?: string
+          cover_letter_id?: string | null
+          created_at?: string | null
+          has_interview?: boolean | null
+          id?: string
+          interview_date?: string | null
+          job_url?: string | null
+          location?: string | null
+          next_step?: string | null
+          notes?: string | null
+          position?: string
+          resume_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "applications_cover_letter_id_fkey"
+            columns: ["cover_letter_id"]
+            isOneToOne: false
+            referencedRelation: "cover_letters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "applications_resume_id_fkey"
+            columns: ["resume_id"]
+            isOneToOne: false
+            referencedRelation: "resumes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cover_letters: {
         Row: {
           content: string
@@ -86,6 +158,47 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      tailored_resumes: {
+        Row: {
+          created_at: string | null
+          file_path: string
+          file_url: string
+          id: string
+          job_id: string
+          original_resume_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          file_path: string
+          file_url: string
+          id?: string
+          job_id: string
+          original_resume_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          file_path?: string
+          file_url?: string
+          id?: string
+          job_id?: string
+          original_resume_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tailored_resumes_original_resume_id_fkey"
+            columns: ["original_resume_id"]
+            isOneToOne: false
+            referencedRelation: "resumes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
