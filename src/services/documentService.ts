@@ -1,7 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
-import { optimizeResumeAPI, generateCoverLetterAPI, CoverLetterResponse, parseJobUrlAPI } from './apiService';
 
 // Resume Types
 export interface Resume {
@@ -18,7 +17,7 @@ export interface Resume {
 export interface CoverLetter {
   id: string;
   content: string;
-  title: string;
+  job_title: string;
   company: string;
   created_at: string;
   user_id: string;
@@ -37,23 +36,6 @@ export interface TailoredResume {
 }
 
 // Resume Functions
-// Define a type that represents JSON data from Supabase
-type Json = string | number | boolean | null | { [key: string]: Json } | Json[];
-
-// Define a type that matches what actually comes from the database
-interface DbResume {
-  id: string;
-  title: string;
-  content: {
-    file_path: string;
-    file_url: string;
-    [key: string]: any;
-  };
-  created_at: string;
-  updated_at: string;
-  user_id: string;
-}
-
 export const fetchResumes = async (): Promise<Resume[]> => {
   const { data, error } = await supabase
     .from('resumes')
@@ -61,22 +43,7 @@ export const fetchResumes = async (): Promise<Resume[]> => {
     .order('created_at', { ascending: false });
 
   if (error) throw error;
-  
-  // Transform database response to match the Resume interface
-  return (data as DbResume[]).map(item => {
-    // Extract file information from the content field
-    const content = item.content as { file_path?: string, file_url?: string } || {};
-    
-    return {
-      id: item.id,
-      title: item.title,
-      file_path: content.file_path || '',
-      file_url: content.file_url || '',
-      created_at: item.created_at,
-      updated_at: item.updated_at,
-      user_id: item.user_id
-    };
-  });
+  return data as Resume[];
 };
 
 export const uploadResume = async (file: File, title: string): Promise<Resume> => {
@@ -98,39 +65,25 @@ export const uploadResume = async (file: File, title: string): Promise<Resume> =
     .from('resumes')
     .getPublicUrl(filePath);
 
-  // Store file information in the database
+  // Save resume metadata to database
   const { data, error } = await supabase
     .from('resumes')
     .insert({
       title,
-      content: {
-        file_path: filePath,
-        file_url: publicUrl
-      },
+      file_path: filePath,
+      file_url: publicUrl,
       user_id: user.id
     })
     .select()
     .single();
 
   if (error) throw error;
-  
-  // Transform database response to match the Resume interface
-  const content = data.content as { file_path: string, file_url: string };
-  
-  return {
-    id: data.id,
-    title: data.title,
-    file_path: content.file_path,
-    file_url: content.file_url,
-    created_at: data.created_at,
-    updated_at: data.updated_at,
-    user_id: data.user_id
-  };
+  return data as Resume;
 };
 
 export const deleteResume = async (id: string): Promise<void> => {
   // First get the resume to get the file path
-  const { data: resumeData, error: fetchError } = await supabase
+  const { data: resume, error: fetchError } = await supabase
     .from('resumes')
     .select('*')
     .eq('id', id)
@@ -138,15 +91,11 @@ export const deleteResume = async (id: string): Promise<void> => {
 
   if (fetchError) throw fetchError;
 
-  // Extract file path from content field
-  const resume = resumeData as DbResume;
-  const filePath = resume.content.file_path;
-
   // Delete from storage
-  if (filePath) {
+  if (resume.file_path) {
     const { error: storageError } = await supabase.storage
       .from('resumes')
-      .remove([filePath]);
+      .remove([resume.file_path]);
       
     if (storageError) throw storageError;
   }
@@ -177,122 +126,65 @@ export interface GenerateCoverLetterParams {
   referral?: string;
 }
 
-export const optimizeResume = async (params: OptimizeResumeParams): Promise<string> => {
+export const optimizeResume = async (params: OptimizeResumeParams): Promise<TailoredResume> => {
+  // This would make an API call to the resume optimization endpoint
+  // For now, we'll create a mock implementation that simulates the process
+  
   const { resumeId, jobUrl, jobText } = params;
   
-  // Get the original resume file
-  const { data: resumeData, error: fetchError } = await supabase
+  // Get the original resume
+  const { data: resume, error: fetchError } = await supabase
     .from('resumes')
     .select('*')
     .eq('id', resumeId)
     .single();
     
   if (fetchError) throw fetchError;
-  
-  // Convert to our type
-  const resume = resumeData as DbResume;
-  
-  // Extract content with type assertion
-  const content = resume.content;
-  
-  // Download the resume file from storage
-  const { data: fileData, error: downloadError } = await supabase.storage
-    .from('resumes')
-    .download(content.file_path);
-    
-  if (downloadError) throw downloadError;
 
-  // Convert to File object
-  const resumeFile = new File([fileData], content.file_path.split('/').pop() || 'resume.pdf', { 
-    type: 'application/pdf' 
-  });
-
-  // Call the API service
-  const result = await optimizeResumeAPI(resumeFile, jobUrl, jobText);
+  // In a real implementation, you'd call your API here with the resume file and job details
+  // For now, we'll just create a placeholder entry in the database
   
   // Get current user
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("User not authenticated");
   
-  // Upload the result as a new tailored resume
-  // In a real implementation, we would create a new PDF from the result and upload it
-  const { data: tailoredResume, error } = await supabase
+  const { data, error } = await supabase
     .from('tailored_resumes')
     .insert({
       original_resume_id: resumeId,
-      job_id: jobUrl || 'manual-entry',
-      file_path: content.file_path,
-      file_url: content.file_url,
+      job_id: jobUrl ? jobUrl : 'manual-entry',
+      file_path: resume.file_path,  // In reality, this would be a new file path
+      file_url: resume.file_url,    // In reality, this would be a new URL
       user_id: user.id
     })
     .select()
     .single();
-  
+    
   if (error) throw error;
-  
-  return result.result;
+  return data as TailoredResume;
 };
 
-export const generateCoverLetter = async (params: GenerateCoverLetterParams): Promise<CoverLetterResponse> => {
-  const { resumeId, jobDescription, userName, company, manager, role, referral } = params;
-  
-  // Get the original resume file
-  const { data: resumeData, error: fetchError } = await supabase
-    .from('resumes')
-    .select('*')
-    .eq('id', resumeId)
-    .single();
-    
-  if (fetchError) throw fetchError;
-  
-  // Convert to our type
-  const resume = resumeData as DbResume;
-  
-  // Extract content with type assertion
-  const content = resume.content;
-  
-  // Download the resume file from storage
-  const { data: fileData, error: downloadError } = await supabase.storage
-    .from('resumes')
-    .download(content.file_path);
-    
-  if (downloadError) throw downloadError;
-
-  // Convert to File object
-  const resumeFile = new File([fileData], content.file_path.split('/').pop() || 'resume.pdf', { 
-    type: 'application/pdf' 
-  });
-
-  // Call the API service
-  const result = await generateCoverLetterAPI(
-    resumeFile, 
-    jobDescription,
-    userName,
-    company,
-    manager,
-    role,
-    referral
-  );
+export const generateCoverLetter = async (params: GenerateCoverLetterParams): Promise<CoverLetter> => {
+  // This would make an API call to the cover letter generation endpoint
+  // For now, we'll create a mock implementation
   
   // Get current user
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("User not authenticated");
-
-  // Save to database
-  if (result.variations && result.variations.length > 0) {
-    const { error } = await supabase
-      .from('cover_letters')
-      .insert({
-        content: result.variations[0].content,
-        title: role,
-        company: company,
-        user_id: user.id
-      });
-      
-    if (error) throw error;
-  }
   
-  return result;
+  const { data, error } = await supabase
+    .from('cover_letters')
+    .insert({
+      content: `This is a placeholder for a cover letter for ${params.role} at ${params.company}`,
+      job_title: params.role,
+      company: params.company,
+      user_id: user.id
+    })
+    .select()
+    .single();
+    
+  if (error) throw error;
+  return data as CoverLetter;
 };
 
 // Job parsing service
@@ -301,12 +193,11 @@ export const parseJobUrl = async (jobUrl: string): Promise<{
   company: string;
   jobDescription: string;
 }> => {
-  // Call the API to parse the job URL
-  const result = await parseJobUrlAPI(jobUrl);
-  
+  // In a real implementation, this would call an API that crawls the job URL
+  // For now, we'll return a placeholder
   return {
-    jobTitle: result.title,
-    company: result.company,
-    jobDescription: result.description
+    jobTitle: "Software Engineer",
+    company: "Example Corp",
+    jobDescription: "This is a placeholder job description extracted from the URL"
   };
 };

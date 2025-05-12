@@ -23,12 +23,6 @@ export interface CoverLetterResponse {
   variations: CoverLetterVariation[];
 }
 
-export interface ParseJobUrlResponse {
-  title: string;
-  company: string;
-  description: string;
-}
-
 // API functions
 export const optimizeResumeAPI = async (
   resumeFile: File, 
@@ -87,7 +81,11 @@ export const generateCoverLetterAPI = async (
   return response.data;
 };
 
-export const parseJobUrlAPI = async (url: string): Promise<ParseJobUrlResponse> => {
+export const parseJobUrlAPI = async (url: string): Promise<{
+  title: string;
+  company: string;
+  description: string;
+}> => {
   const response = await apiClient.post('/parse-job-url', { url });
   return response.data;
 };

@@ -1,18 +1,14 @@
 
-import { useState, ReactNode } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { Briefcase, FileText, Home, Layout, LogOut, Mail, Menu, Search, Settings, User2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
-interface AppLayoutProps {
-  children: ReactNode;
-}
-
-const AppLayout = ({ children }: AppLayoutProps) => {
+const AppLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const pathname = usePathname();
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { signOut } = useAuth();
 
   const isActiveRoute = (route: string) => {
@@ -20,15 +16,14 @@ const AppLayout = ({ children }: AppLayoutProps) => {
   };
 
   const NavItem = ({ icon: Icon, label, route }: { icon: any; label: string; route: string }) => (
-    <Link href={route} className="block w-full">
-      <Button
-        variant={isActiveRoute(route) ? "secondary" : "ghost"}
-        className={`w-full justify-start gap-2 ${isActiveRoute(route) ? 'bg-secondary' : ''}`}
-      >
-        <Icon size={18} />
-        {isSidebarOpen && <span>{label}</span>}
-      </Button>
-    </Link>
+    <Button
+      variant={isActiveRoute(route) ? "secondary" : "ghost"}
+      className={`w-full justify-start gap-2 ${isActiveRoute(route) ? 'bg-secondary' : ''}`}
+      onClick={() => navigate(route)}
+    >
+      <Icon size={18} />
+      {isSidebarOpen && <span>{label}</span>}
+    </Button>
   );
 
   return (
@@ -78,7 +73,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto bg-background">
         <div className="p-6">
-          {children}
+          <Outlet />
         </div>
       </main>
     </div>

@@ -87,47 +87,6 @@ export type Database = {
         }
         Relationships: []
       }
-      tailored_resumes: {
-        Row: {
-          created_at: string | null
-          file_path: string
-          file_url: string
-          id: string
-          job_id: string
-          original_resume_id: string
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          file_path: string
-          file_url: string
-          id?: string
-          job_id: string
-          original_resume_id: string
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          file_path?: string
-          file_url?: string
-          id?: string
-          job_id?: string
-          original_resume_id?: string
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "tailored_resumes_original_resume_id_fkey"
-            columns: ["original_resume_id"]
-            isOneToOne: false
-            referencedRelation: "resumes"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
     }
     Views: {
       [_ in never]: never
