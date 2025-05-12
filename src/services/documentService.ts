@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
 import { Json } from '@/integrations/supabase/types';
@@ -91,12 +92,12 @@ export const fetchResumes = async (): Promise<Resume[]> => {
   if (error) throw error;
   
   // Ensure the content is properly structured
-  return (data as Resume[]).map(resume => ({
+  return (data as any[]).map(resume => ({
     ...resume,
     content: typeof resume.content === 'string' 
       ? JSON.parse(resume.content) 
       : resume.content
-  }));
+  })) as Resume[];
 };
 
 // Add the missing uploadResume function that's being imported in Resumes.tsx
@@ -124,7 +125,7 @@ export const uploadResume = async (file: File, title: string): Promise<Resume> =
     .from('resumes')
     .insert({
       title,
-      content: {}, // Empty JSON object for now
+      content: {} as any, // Empty JSON object for now
       user_id: user.id,
       file_path: filePath,
       file_url: publicUrl
@@ -152,7 +153,7 @@ export const uploadResumeContent = async (title: string, content: ResumeContent)
     .from('resumes')
     .insert({
       title,
-      content,
+      content: content as unknown as Json,
       user_id: user.id
     })
     .select()
@@ -166,7 +167,7 @@ export const deleteResume = async (id: string): Promise<void> => {
   // Get the resume to find the file path
   const { data: resume, error: fetchError } = await supabase
     .from('resumes')
-    .select('file_path')
+    .select('*')
     .eq('id', id)
     .single();
 
