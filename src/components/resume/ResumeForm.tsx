@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from '@/components/ui/button';
@@ -90,35 +89,38 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
     const { name, value } = e.target;
     if (name.includes('.')) {
       const [section, field] = name.split('.');
-      setFormData({
-        ...formData,
+      
+      setFormData(prevState => ({
+        ...prevState,
         content: {
-          ...formData.content,
+          ...prevState.content,
           [section]: {
-            ...formData.content[section as keyof ResumeContent],
+            ...(prevState.content[section as keyof ResumeContent] as object),
             [field]: value
           }
         }
-      });
+      }));
     } else {
-      setFormData({
-        ...formData,
+      setFormData(prevState => ({
+        ...prevState,
         [name]: value
-      });
+      }));
     }
   };
 
   const handleArrayChange = (section: keyof ResumeContent, index: number, value: string) => {
     if (section === 'skills') {
-      const newSkills = [...formData.content.skills];
-      newSkills[index] = value;
-      
-      setFormData({
-        ...formData,
-        content: {
-          ...formData.content,
-          skills: newSkills
-        }
+      setFormData(prevState => {
+        const newSkills = [...prevState.content.skills];
+        newSkills[index] = value;
+        
+        return {
+          ...prevState,
+          content: {
+            ...prevState.content,
+            skills: newSkills
+          }
+        };
       });
     }
   };
@@ -129,18 +131,20 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
     field: string, 
     value: string
   ) => {
-    const newArray = [...formData.content[section]];
-    newArray[index] = {
-      ...newArray[index],
-      [field]: value
-    };
+    setFormData(prevState => {
+      const newArray = [...prevState.content[section]];
+      newArray[index] = {
+        ...newArray[index],
+        [field]: value
+      };
 
-    setFormData({
-      ...formData,
-      content: {
-        ...formData.content,
-        [section]: newArray
-      }
+      return {
+        ...prevState,
+        content: {
+          ...prevState.content,
+          [section]: newArray
+        }
+      };
     });
   };
 

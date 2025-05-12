@@ -92,11 +92,11 @@ export const fetchResumes = async (): Promise<Resume[]> => {
   if (error) throw error;
   
   // Ensure the content is properly structured
-  return (data as any[]).map(resume => ({
+  return (data || []).map(resume => ({
     ...resume,
     content: typeof resume.content === 'string' 
       ? JSON.parse(resume.content) 
-      : resume.content
+      : (resume.content as unknown as ResumeContent)
   })) as Resume[];
 };
 
@@ -125,7 +125,7 @@ export const uploadResume = async (file: File, title: string): Promise<Resume> =
     .from('resumes')
     .insert({
       title,
-      content: {} as any, // Empty JSON object for now
+      content: {} as Json, // Empty JSON object for now
       user_id: user.id,
       file_path: filePath,
       file_url: publicUrl
@@ -139,7 +139,10 @@ export const uploadResume = async (file: File, title: string): Promise<Resume> =
     throw error;
   }
 
-  return data as Resume;
+  return {
+    ...data,
+    content: data.content as unknown as ResumeContent
+  } as Resume;
 };
 
 export const uploadResumeContent = async (title: string, content: ResumeContent): Promise<Resume> => {
@@ -160,7 +163,11 @@ export const uploadResumeContent = async (title: string, content: ResumeContent)
     .single();
 
   if (error) throw error;
-  return data as Resume;
+  
+  return {
+    ...data,
+    content: data.content as unknown as ResumeContent
+  } as Resume;
 };
 
 export const deleteResume = async (id: string): Promise<void> => {
