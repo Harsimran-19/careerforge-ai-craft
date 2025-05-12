@@ -11,6 +11,8 @@ export interface Resume {
   created_at: string;
   updated_at: string;
   user_id: string;
+  file_path?: string; // Optional field for file path
+  file_url?: string; // Optional field for file URL
 }
 
 export interface CoverLetter {
@@ -44,6 +46,48 @@ export const fetchResumes = async (): Promise<Resume[]> => {
   return data as Resume[];
 };
 
+// Add the missing uploadResume function that's being imported in Resumes.tsx
+export const uploadResume = async (file: File, title: string): Promise<Resume> => {
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) throw new Error("User not authenticated");
+
+  // Upload file to storage
+  const filePath = `resumes/${user.id}/${uuidv4()}-${file.name}`;
+  const { error: uploadError } = await supabase.storage
+    .from('documents')
+    .upload(filePath, file);
+
+  if (uploadError) throw uploadError;
+
+  // Get the public URL for the uploaded file
+  const { data: { publicUrl } } = supabase.storage
+    .from('documents')
+    .getPublicUrl(filePath);
+
+  // Save resume metadata to database
+  const { data, error } = await supabase
+    .from('resumes')
+    .insert({
+      title,
+      content: {}, // Empty JSON object for now
+      user_id: user.id,
+      file_path: filePath,
+      file_url: publicUrl
+    })
+    .select()
+    .single();
+
+  if (error) {
+    // If there was an error saving to database, clean up the uploaded file
+    await supabase.storage.from('documents').remove([filePath]);
+    throw error;
+  }
+
+  return data as Resume;
+};
+
 export const uploadResumeContent = async (title: string, content: any): Promise<Resume> => {
   // Get current user
   const { data: { user } } = await supabase.auth.getUser();
@@ -66,6 +110,27 @@ export const uploadResumeContent = async (title: string, content: any): Promise<
 };
 
 export const deleteResume = async (id: string): Promise<void> => {
+  // Get the resume to find the file path
+  const { data: resume, error: fetchError } = await supabase
+    .from('resumes')
+    .select('file_path')
+    .eq('id', id)
+    .single();
+
+  if (fetchError) throw fetchError;
+
+  // Delete the file from storage if file_path exists
+  if (resume?.file_path) {
+    const { error: deleteFileError } = await supabase.storage
+      .from('documents')
+      .remove([resume.file_path]);
+    
+    // Log but don't throw on file deletion error
+    if (deleteFileError) {
+      console.error("Error deleting file:", deleteFileError);
+    }
+  }
+
   // Delete from database
   const { error } = await supabase
     .from('resumes')
