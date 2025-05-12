@@ -1,7 +1,7 @@
 
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8000'; // Change this to your actual API base URL
+const API_BASE_URL = '/api'; // Using the proxy we set up in vite.config.ts
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
