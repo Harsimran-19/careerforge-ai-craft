@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
-import { Briefcase, FileText, Home, Layout, LogOut, Menu, Search, Settings, User2 } from "lucide-react";
+import { Briefcase, FileText, Home, Layout, LogOut, Menu, MessageSquare, Search, Settings, User2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 const AppLayout = () => {
@@ -50,6 +50,7 @@ const AppLayout = () => {
         <div className="flex-1 overflow-y-auto p-2 space-y-1">
           <NavItem icon={Home} label="Dashboard" route="/dashboard" />
           <NavItem icon={FileText} label="My Resumes" route="/resumes" />
+          <NavItem icon={MessageSquare} label="Resume Bot" route="/resume-bot" />
           <NavItem icon={Briefcase} label="Job Applications" route="/applications" />
           <NavItem icon={Search} label="Job Search" route="/job-search" />
           <NavItem icon={Layout} label="Company Analysis" route="/companies" />

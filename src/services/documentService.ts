@@ -139,6 +139,7 @@ export const uploadResume = async (file: File, title: string): Promise<Resume> =
     throw error;
   }
 
+  // Cast to the proper Resume type including the file_path property
   return {
     ...data,
     content: data.content as unknown as ResumeContent
@@ -181,7 +182,7 @@ export const deleteResume = async (id: string): Promise<void> => {
   if (fetchError) throw fetchError;
 
   // Delete the file from storage if file_path exists
-  if (resume?.file_path) {
+  if (resume && 'file_path' in resume && resume.file_path) {
     const { error: deleteFileError } = await supabase.storage
       .from('documents')
       .remove([resume.file_path]);

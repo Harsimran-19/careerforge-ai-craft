@@ -20,6 +20,7 @@ import Companies from "./pages/Companies";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import ResumeBot from "./pages/ResumeBot";
 
 // Components
 import AppLayout from "./components/AppLayout";
@@ -71,6 +72,7 @@ const AppRoutes = () => {
         <Route path="/companies" element={<Companies />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/resume-bot" element={<ResumeBot />} />
       </Route>
       
       {/* 404 Route */}

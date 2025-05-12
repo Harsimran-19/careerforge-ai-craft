@@ -1,5 +1,6 @@
 
 import axios from 'axios';
+import { ChatRequest } from './api/chat';
 
 const API_BASE_URL = '/api'; // Using the proxy we set up in vite.config.ts
 
@@ -90,8 +91,14 @@ export const parseJobUrlAPI = async (url: string): Promise<{
   return response.data;
 };
 
+export const sendChatRequestAPI = async (request: ChatRequest): Promise<{ content: string }> => {
+  const response = await apiClient.post('/chat', request);
+  return response.data;
+};
+
 export default {
   optimizeResumeAPI,
   generateCoverLetterAPI,
   parseJobUrlAPI,
+  sendChatRequestAPI,
 };
