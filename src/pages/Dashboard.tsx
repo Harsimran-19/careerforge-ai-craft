@@ -5,53 +5,111 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Briefcase, FileText, Plus, Sparkles, Upload } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { fetchResumes } from "@/services/documentService";
+import { supabase } from "@/integrations/supabase/client";
 
-// Sample data for demonstration
-const sampleApplicationsData = [
-  { 
-    id: '1',
-    company: 'Acme Inc',
-    position: 'Senior Frontend Developer',
-    status: 'Applied',
-    date: '2025-04-20',
-    logo: 'https://ui-avatars.com/api/?name=A&background=6366f1&color=fff'
-  },
-  { 
-    id: '2',
-    company: 'TechCorp',
-    position: 'UX Designer',
-    status: 'Interview',
-    date: '2025-04-15',
-    logo: 'https://ui-avatars.com/api/?name=T&background=06b6d4&color=fff'
-  },
-  { 
-    id: '3',
-    company: 'Startup.io',
-    position: 'Product Manager',
-    status: 'Offered',
-    date: '2025-04-10',
-    logo: 'https://ui-avatars.com/api/?name=S&background=22c55e&color=fff'
-  }
-];
+// Application type definition
+interface RecentApplication {
+  id: string;
+  company: string;
+  position: string;
+  status: string;
+  date: string;
+  logo: string;
+}
+
+// Full application type definition
+interface Application {
+  id: string;
+  position: string;
+  company: string;
+  status: string;
+  applied_date: string;
+  resume_id: string;
+  cover_letter_id: string;
+  has_interview: boolean;
+  interview_date: string | null;
+}
 
 const Dashboard = () => {
-  const [resumeCount, setResumeCount] = useState(0);
   const [applicationCount, setApplicationCount] = useState(0);
-  const [recentApplications, setRecentApplications] = useState<typeof sampleApplicationsData>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [recentApplications, setRecentApplications] = useState<RecentApplication[]>([]);
+  const [responseRate, setResponseRate] = useState(0);
+  const [interviewSuccess, setInterviewSuccess] = useState(0);
+  const [isApplicationsLoading, setIsApplicationsLoading] = useState(true);
   const navigate = useNavigate();
 
+  // Fetch resumes using React Query
+  const {
+    data: resumes = [],
+    isLoading: isResumesLoading
+  } = useQuery({
+    queryKey: ['resumes'],
+    queryFn: fetchResumes
+  });
+
+  // Calculate resume count from the fetched data
+  const resumeCount = resumes.length;
+
+  // Fetch applications data from Supabase
   useEffect(() => {
-    // Simulate loading data
-    const timer = setTimeout(() => {
-      setResumeCount(2);
-      setApplicationCount(3);
-      setRecentApplications(sampleApplicationsData);
-      setIsLoading(false);
-    }, 1000);
-    
-    return () => clearTimeout(timer);
+    const fetchApplications = async () => {
+      setIsApplicationsLoading(true);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data, error } = await supabase
+          .from('applications')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('applied_date', { ascending: false });
+
+        if (error) throw error;
+
+        // Set application count
+        setApplicationCount(data.length);
+
+        // Calculate response rate (applications that have status other than 'Applied')
+        if (data.length > 0) {
+          const responsesReceived = data.filter(app => 
+            app.status && app.status !== 'Applied').length;
+          setResponseRate(Math.round((responsesReceived / data.length) * 100));
+          
+          // Calculate interview success rate
+          const interviewsScheduled = data.filter(app => app.has_interview).length;
+          const offersReceived = data.filter(app => 
+            app.status && app.status === 'Offered').length;
+          
+          if (interviewsScheduled > 0) {
+            setInterviewSuccess(Math.round((offersReceived / interviewsScheduled) * 100));
+          }
+        }
+
+        // Format recent applications for display (max 5)
+        const recentApps = data.slice(0, 5).map(app => ({
+          id: app.id,
+          company: app.company || 'Unknown Company',
+          position: app.position || 'Unknown Position',
+          status: app.status || 'Applied',
+          date: app.applied_date || new Date().toISOString(),
+          logo: `https://ui-avatars.com/api/?name=${app.company?.charAt(0) || 'C'}&background=22c55e&color=fff`
+        }));
+
+        setRecentApplications(recentApps);
+      } catch (error) {
+        console.error('Error fetching applications:', error);
+      } finally {
+        setIsApplicationsLoading(false);
+      }
+    };
+
+    fetchApplications();
   }, []);
+
+  // Set loading state based on all data fetching operations
+  const isLoading = isResumesLoading || isApplicationsLoading;
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -102,7 +160,7 @@ const Dashboard = () => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -113,7 +171,7 @@ const Dashboard = () => {
             <div className="text-3xl font-bold">{applicationCount}</div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -121,11 +179,11 @@ const Dashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <div className="text-3xl font-bold">33%</div>
-            <Progress value={33} className="h-2" />
+            <div className="text-3xl font-bold">{responseRate}%</div>
+            <Progress value={responseRate} className="h-2" />
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -133,8 +191,8 @@ const Dashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <div className="text-3xl font-bold">50%</div>
-            <Progress value={50} className="h-2" />
+            <div className="text-3xl font-bold">{interviewSuccess}%</div>
+            <Progress value={interviewSuccess} className="h-2" />
           </CardContent>
         </Card>
       </div>
@@ -154,7 +212,7 @@ const Dashboard = () => {
             <FileText className="h-20 w-20 opacity-20" />
           </CardContent>
         </Card>
-        
+
         <Card className="bg-gradient-to-br from-careerforge-600 to-careerforge-500 text-white">
           <CardContent className="p-6 flex items-center justify-between">
             <div>

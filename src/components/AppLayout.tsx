@@ -36,7 +36,7 @@ const AppLayout = () => {
       >
         <div className="p-4 flex items-center justify-between border-b border-border h-16">
           {isSidebarOpen ? (
-            <h1 className="font-bold text-xl gradient-text">CareerForge Pro</h1>
+            <h1 className="font-bold text-xl gradient-text"></h1>
           ) : (
             <div className="w-full flex justify-center">
               <div className="h-8 w-8 bg-gradient-to-r from-careerforge-600 to-careerforge-400 rounded-md"></div>

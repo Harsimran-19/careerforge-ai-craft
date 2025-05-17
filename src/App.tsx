@@ -5,7 +5,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { configureApiUrls } from "@/services/apiService";
 
 // Pages
 import Index from "./pages/Index";
@@ -28,11 +29,11 @@ import AppLayout from "./components/AppLayout";
 // Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
-  
+
   if (loading) {
     return <div className="flex h-screen items-center justify-center">Loading...</div>;
   }
-  
+
   if (!user) {
     return <Navigate to="/login" />;
   }
@@ -57,12 +58,12 @@ const AppRoutes = () => {
       <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Index />} />
       <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login />} />
       <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <Register />} />
-      
+
       {/* Onboarding - semi-protected */}
       <Route path="/onboarding" element={
         user ? <Onboarding /> : <Navigate to="/login" />
       } />
-      
+
       {/* Protected Routes - AppLayout */}
       <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
         <Route path="/dashboard" element={<Dashboard />} />
@@ -74,7 +75,7 @@ const AppRoutes = () => {
         <Route path="/settings" element={<Settings />} />
         <Route path="/resume-bot" element={<ResumeBot />} />
       </Route>
-      
+
       {/* 404 Route */}
       <Route path="*" element={<NotFound />} />
     </Routes>
@@ -84,6 +85,30 @@ const AppRoutes = () => {
 const App = () => {
   // Create a new QueryClient instance inside the component
   const [queryClient] = useState(() => new QueryClient());
+
+  // Configure API URLs when the app starts
+  useEffect(() => {
+    // Log all environment variables for debugging
+    console.log("All env variables:", import.meta.env);
+    
+    // Configure the external API URLs from environment variables
+    const JOB_SEARCH_API_URL = import.meta.env.VITE_JOB_SEARCH_API_URL;
+    const RESUME_API_URL = import.meta.env.VITE_RESUME_API_URL || '/api';
+
+    console.log("Raw env values:", { 
+      JOB_SEARCH_API_URL_ENV: import.meta.env.VITE_JOB_SEARCH_API_URL,
+      RESUME_API_URL_ENV: import.meta.env.VITE_RESUME_API_URL 
+    });
+    
+    console.log("Configuring API URLs:", { JOB_SEARCH_API_URL, RESUME_API_URL });
+
+    // Only configure if the values are actual URLs and not undefined
+    if (JOB_SEARCH_API_URL && RESUME_API_URL) {
+      configureApiUrls(JOB_SEARCH_API_URL, RESUME_API_URL);
+    } else {
+      console.error("Environment variables not properly loaded. Check your .env file and restart the dev server.");
+    }
+  }, []);
 
   return (
     <BrowserRouter>

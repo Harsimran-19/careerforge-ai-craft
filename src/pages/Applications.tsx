@@ -1,74 +1,101 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Building2, Briefcase, Calendar, CheckCircle, ChevronDown, Clock, FileText, Link2, MapPin } from "lucide-react";
+import { Building2, Briefcase, Calendar, CheckCircle, ChevronDown, Clock, FileText, Link2, MapPin, Edit, FileDown } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { fetchResumeById, fetchCoverLetterById, Resume, CoverLetter } from "@/services/documentService";
+import ResumeTextEditor from "@/components/resume/ResumeTextEditor";
+import CoverLetterEditor from "@/components/cover-letter/CoverLetterEditor";
+import { supabase } from "@/integrations/supabase/client";
 
-// Sample application data
-const sampleApplications = [
-  {
-    id: "1",
-    position: "Senior Frontend Developer",
-    company: "Acme Inc",
-    location: "San Francisco, CA",
-    appliedDate: "2025-04-20",
-    status: "Applied",
-    notes: "Applied through their careers page. Used tailored resume version 2.",
-    nextStep: "Follow up in one week if no response",
-    resumeUrl: "#",
-    coverLetterUrl: "#",
-    jobUrl: "https://example.com/job/1",
-    hasInterview: false,
-    interviewDate: null,
-    logo: "https://ui-avatars.com/api/?name=A&background=6366f1&color=fff"
-  },
-  {
-    id: "2",
-    position: "UX Designer",
-    company: "TechCorp",
-    location: "Remote",
-    appliedDate: "2025-04-15",
-    status: "Interview",
-    notes: "Had initial screening call with HR on April 18. Technical interview scheduled.",
-    nextStep: "Prepare portfolio presentation",
-    resumeUrl: "#",
-    coverLetterUrl: "#",
-    jobUrl: "https://example.com/job/2",
-    hasInterview: true,
-    interviewDate: "2025-04-25",
-    logo: "https://ui-avatars.com/api/?name=T&background=06b6d4&color=fff"
-  },
-  {
-    id: "3",
-    position: "Product Manager",
-    company: "Startup.io",
-    location: "New York, NY",
-    appliedDate: "2025-04-10",
-    status: "Offered",
-    notes: "Received offer on April 22. Base salary: $140K with 15% bonus and good benefits.",
-    nextStep: "Review offer letter and respond by April 29",
-    resumeUrl: "#",
-    coverLetterUrl: "#",
-    jobUrl: "https://example.com/job/3",
-    hasInterview: true,
-    interviewDate: "2025-04-18",
-    logo: "https://ui-avatars.com/api/?name=S&background=22c55e&color=fff"
-  }
-];
+// Application type definition
+interface Application {
+  id: string;
+  position: string;
+  company: string;
+  location: string;
+  appliedDate: string;
+  status: string;
+  notes: string;
+  nextStep: string;
+  resumeId: string; // ID of the resume in the database
+  coverLetterId: string; // ID of the cover letter in the database
+  jobUrl: string;
+  hasInterview: boolean;
+  interviewDate: string | null;
+  // logo: string;
+}
 
 const Applications = () => {
-  const [applications, setApplications] = useState(sampleApplications);
+  const [applications, setApplications] = useState<Application[]>([]);
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedApp, setExpandedApp] = useState<string | null>(null);
-  const [selectedApp, setSelectedApp] = useState<(typeof sampleApplications)[0] | null>(null);
+  const [selectedApp, setSelectedApp] = useState<Application | null>(null);
+  const [selectedResume, setSelectedResume] = useState<Resume | null>(null);
+  const [selectedCoverLetter, setSelectedCoverLetter] = useState<CoverLetter | null>(null);
+  const [isResumeEditorOpen, setIsResumeEditorOpen] = useState(false);
+  const [isCoverLetterEditorOpen, setIsCoverLetterEditorOpen] = useState(false);
+  const [isLoadingResume, setIsLoadingResume] = useState(false);
+  const [isLoadingCoverLetter, setIsLoadingCoverLetter] = useState(false);
+  const [isLoadingApplications, setIsLoadingApplications] = useState(true);
   const { toast } = useToast();
+
+  // Fetch applications from the database
+  useEffect(() => {
+    const fetchApplications = async () => {
+      setIsLoadingApplications(true);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("User not authenticated");
+
+        const { data, error } = await supabase
+          .from('applications')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('applied_date', { ascending: false });
+
+        if (error) throw error;
+
+        // Convert the data to our Application interface format
+        const formattedApplications = data.map(app => ({
+          id: app.id,
+          position: app.position,
+          company: app.company,
+          location: app.location || "Unknown",
+          appliedDate: app.applied_date || new Date().toISOString(),
+          status: app.status || "Applied",
+          notes: app.notes || "",
+          nextStep: app.next_step || "",
+          resumeId: app.resume_id || "",
+          coverLetterId: app.cover_letter_id || "",
+          jobUrl: app.job_url || "",
+          hasInterview: app.has_interview || false,
+          interviewDate: app.interview_date,
+          // logo: app.logo || `https://ui-avatars.com/api/?name=${app.company.charAt(0)}&background=22c55e&color=fff`
+        }));
+
+        setApplications(formattedApplications);
+      } catch (error: any) {
+        console.error("Error fetching applications:", error);
+        toast({
+          title: "Error loading applications",
+          description: error?.message || "Failed to load your applications",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoadingApplications(false);
+      }
+    };
+
+    fetchApplications();
+  }, [toast]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -79,52 +106,219 @@ const Applications = () => {
       default: return "bg-gray-100 text-gray-600";
     }
   };
-  
+
   const toggleExpand = (id: string) => {
     setExpandedApp(expandedApp === id ? null : id);
   };
 
-  const handleStatusChange = (id: string, newStatus: string) => {
-    setApplications(applications.map(app => 
-      app.id === id ? { ...app, status: newStatus } : app
-    ));
-    
-    toast({
-      title: "Status updated",
-      description: `Application status changed to ${newStatus}`,
-    });
+  const handleStatusChange = async (id: string, newStatus: string) => {
+    try {
+      // Update in the database
+      const { error } = await supabase
+        .from('applications')
+        .update({ status: newStatus })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // Update local state
+      setApplications(applications.map(app =>
+        app.id === id ? { ...app, status: newStatus } : app
+      ));
+
+      toast({
+        title: "Status updated",
+        description: `Application status changed to ${newStatus}`,
+      });
+    } catch (error: any) {
+      console.error("Error updating status:", error);
+      toast({
+        title: "Error updating status",
+        description: error?.message || "Failed to update application status",
+        variant: "destructive",
+      });
+    }
   };
-  
-  const handleInterviewToggle = (id: string, hasInterview: boolean) => {
-    setApplications(applications.map(app => 
-      app.id === id ? { ...app, hasInterview } : app
-    ));
-    
-    toast({
-      description: hasInterview ? 
-        "Interview scheduled" : 
-        "Interview removed",
-    });
+
+  const handleInterviewToggle = async (id: string, hasInterview: boolean) => {
+    try {
+      // Update in the database
+      const { error } = await supabase
+        .from('applications')
+        .update({ has_interview: hasInterview })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // Update local state
+      setApplications(applications.map(app =>
+        app.id === id ? { ...app, hasInterview } : app
+      ));
+
+      toast({
+        description: hasInterview ?
+          "Interview scheduled" :
+          "Interview removed",
+      });
+    } catch (error: any) {
+      console.error("Error updating interview status:", error);
+      toast({
+        title: "Error updating interview status",
+        description: error?.message || "Failed to update interview status",
+        variant: "destructive",
+      });
+    }
   };
-  
-  const handleUpdateNotes = () => {
+
+  const handleDeleteApplication = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this application? This action cannot be undone.")) {
+      return;
+    }
+    
+    try {
+      // Delete from the database
+      const { error } = await supabase
+        .from('applications')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // Update local state by removing the deleted application
+      setApplications(applications.filter(app => app.id !== id));
+      
+      // Close the expanded view if it was open
+      if (expandedApp === id) {
+        setExpandedApp(null);
+      }
+
+      toast({
+        title: "Application deleted",
+        description: "The application has been successfully deleted",
+      });
+    } catch (error: any) {
+      console.error("Error deleting application:", error);
+      toast({
+        title: "Error deleting application",
+        description: error?.message || "Failed to delete application",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUpdateNotes = async () => {
     if (!selectedApp) return;
-    
-    setApplications(applications.map(app => 
-      app.id === selectedApp.id ? { ...app, notes: selectedApp.notes, nextStep: selectedApp.nextStep } : app
-    ));
-    
+
+    try {
+      // Update in the database
+      const { error } = await supabase
+        .from('applications')
+        .update({
+          notes: selectedApp.notes,
+          next_step: selectedApp.nextStep
+        })
+        .eq('id', selectedApp.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setApplications(applications.map(app =>
+        app.id === selectedApp.id ? { ...app, notes: selectedApp.notes, nextStep: selectedApp.nextStep } : app
+      ));
+
+      toast({
+        description: "Application notes updated",
+      });
+
+      setSelectedApp(null);
+    } catch (error: any) {
+      console.error("Error updating notes:", error);
+      toast({
+        title: "Error updating notes",
+        description: error?.message || "Failed to update application notes",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleOpenResumeEditor = async (resumeId: string) => {
+    if (!resumeId) {
+      toast({
+        title: "No resume found",
+        description: "This application doesn't have a resume attached",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoadingResume(true);
+    try {
+      const resume = await fetchResumeById(resumeId);
+      setSelectedResume(resume);
+      setIsResumeEditorOpen(true);
+    } catch (error: any) {
+      toast({
+        title: "Error loading resume",
+        description: error?.message || "Failed to load resume",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingResume(false);
+    }
+  };
+
+  const handleOpenCoverLetterEditor = async (coverLetterId: string) => {
+    if (!coverLetterId) {
+      toast({
+        title: "No cover letter found",
+        description: "This application doesn't have a cover letter attached",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoadingCoverLetter(true);
+    try {
+      const coverLetter = await fetchCoverLetterById(coverLetterId);
+      setSelectedCoverLetter(coverLetter);
+      setIsCoverLetterEditorOpen(true);
+    } catch (error: any) {
+      toast({
+        title: "Error loading cover letter",
+        description: error?.message || "Failed to load cover letter",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingCoverLetter(false);
+    }
+  };
+
+  const handleResumeUpdate = (updatedResume: Resume) => {
+    // Close the editor
+    setIsResumeEditorOpen(false);
+    setSelectedResume(null);
+
     toast({
-      description: "Application notes updated",
+      title: "Resume updated",
+      description: "Your resume has been updated successfully",
     });
-    
-    setSelectedApp(null);
+  };
+
+  const handleCoverLetterUpdate = (updatedCoverLetter: CoverLetter) => {
+    // Close the editor
+    setIsCoverLetterEditorOpen(false);
+    setSelectedCoverLetter(null);
+
+    toast({
+      title: "Cover letter updated",
+      description: "Your cover letter has been updated successfully",
+    });
   };
 
   // Filter applications based on status and search query
   const filteredApplications = applications.filter(app => {
     const matchesStatus = statusFilter === "all" || app.status === statusFilter;
-    const matchesSearch = app.position.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    const matchesSearch = app.position.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           app.company.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesStatus && matchesSearch;
   });
@@ -138,7 +332,7 @@ const Applications = () => {
           Find New Jobs
         </Button>
       </div>
-      
+
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="w-full max-w-xs">
@@ -159,7 +353,7 @@ const Applications = () => {
             </SelectContent>
           </Select>
         </div>
-        
+
         <div className="flex-1">
           <Label htmlFor="search-applications" className="text-sm">Search</Label>
           <Input
@@ -171,16 +365,23 @@ const Applications = () => {
           />
         </div>
       </div>
-      
+
       {/* Applications List */}
-      {filteredApplications.length > 0 ? (
+      {isLoadingApplications ? (
+        <div className="flex items-center justify-center p-12">
+          <div className="flex flex-col items-center space-y-4">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+            <p className="text-sm text-muted-foreground">Loading applications...</p>
+          </div>
+        </div>
+      ) : filteredApplications.length > 0 ? (
         <div className="space-y-4">
           {filteredApplications.map((app) => (
             <Card key={app.id} className="overflow-hidden">
               <div className="cursor-pointer" onClick={() => toggleExpand(app.id)}>
                 <div className="flex items-center p-4 sm:p-6">
                   <img
-                    src={app.logo}
+                    src={`https://ui-avatars.com/api/?name=${app.company.charAt(0)}&background=22c55e&color=fff`}
                     alt={app.company}
                     className="w-12 h-12 rounded-md mr-4"
                   />
@@ -212,12 +413,12 @@ const Applications = () => {
                       )}
                     </div>
                   </div>
-                  <ChevronDown 
-                    className={`h-5 w-5 text-muted-foreground transition-transform ${expandedApp === app.id ? 'rotate-180' : ''}`} 
+                  <ChevronDown
+                    className={`h-5 w-5 text-muted-foreground transition-transform ${expandedApp === app.id ? 'rotate-180' : ''}`}
                   />
                 </div>
               </div>
-              
+
               {expandedApp === app.id && (
                 <div className="px-4 sm:px-6 pb-6 pt-2 border-t space-y-4">
                   <div className="grid md:grid-cols-2 gap-6">
@@ -239,7 +440,7 @@ const Applications = () => {
                           </SelectContent>
                         </Select>
                       </div>
-                      
+
                       <div>
                         <div className="flex items-center justify-between">
                           <Label htmlFor={`interview-toggle-${app.id}`} className="font-medium">
@@ -258,40 +459,96 @@ const Applications = () => {
                               id={`interview-date-${app.id}`}
                               type="date"
                               value={app.interviewDate || ""}
-                              onChange={(e) => {
-                                setApplications(applications.map(a => 
-                                  a.id === app.id ? { ...a, interviewDate: e.target.value } : a
-                                ));
+                              onChange={async (e) => {
+                                try {
+                                  // Update in the database
+                                  const { error } = await supabase
+                                    .from('applications')
+                                    .update({ interview_date: e.target.value })
+                                    .eq('id', app.id);
+
+                                  if (error) throw error;
+
+                                  // Update local state
+                                  setApplications(applications.map(a =>
+                                    a.id === app.id ? { ...a, interviewDate: e.target.value } : a
+                                  ));
+                                } catch (error) {
+                                  console.error("Error updating interview date:", error);
+                                  toast({
+                                    title: "Error updating interview date",
+                                    description: "Failed to update interview date",
+                                    variant: "destructive",
+                                  });
+                                }
                               }}
                               className="mt-1"
                             />
                           </div>
                         )}
                       </div>
-                      
-                      <div className="flex items-center gap-4">
-                        <Button variant="outline" size="sm" className="gap-1">
-                          <FileText className="h-4 w-4" />
-                          Resume
+
+                      <div className="flex items-center gap-4 flex-wrap">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1"
+                          onClick={() => handleOpenResumeEditor(app.resumeId)}
+                          disabled={isLoadingResume}
+                        >
+                          {isLoadingResume ? (
+                            <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
+                          ) : (
+                            <Edit className="h-4 w-4" />
+                          )}
+                          Edit Resume
                         </Button>
-                        <Button variant="outline" size="sm" className="gap-1">
-                          <FileText className="h-4 w-4" />
-                          Cover Letter
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1"
+                          onClick={() => handleOpenCoverLetterEditor(app.coverLetterId)}
+                          disabled={isLoadingCoverLetter}
+                        >
+                          {isLoadingCoverLetter ? (
+                            <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
+                          ) : (
+                            <Edit className="h-4 w-4" />
+                          )}
+                          Edit Cover Letter
                         </Button>
-                        <Button variant="outline" size="sm" className="gap-1">
-                          <Link2 className="h-4 w-4" />
-                          Job URL
+                        {app.jobUrl && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1"
+                            onClick={() => window.open(app.jobUrl, '_blank')}
+                          >
+                            <Link2 className="h-4 w-4" />
+                            Job URL
+                          </Button>
+                        )}
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="gap-1 ml-auto"
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent expanding/collapsing when clicking delete
+                            handleDeleteApplication(app.id);
+                          }}
+                        >
+                          Delete Application
                         </Button>
                       </div>
                     </div>
-                    
+
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <h4 className="font-medium">Notes</h4>
                         <Dialog>
                           <DialogTrigger asChild>
-                            <Button 
-                              variant="outline" 
+                            <Button
+                              variant="outline"
                               size="sm"
                               onClick={() => setSelectedApp(app)}
                             >
@@ -340,7 +597,7 @@ const Applications = () => {
                       <div className="text-sm rounded-md bg-muted p-3">
                         <p>{app.notes}</p>
                       </div>
-                      
+
                       <div>
                         <h4 className="font-medium mb-1">Next Step</h4>
                         <div className="flex items-start gap-2 text-sm">
@@ -362,10 +619,10 @@ const Applications = () => {
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground mb-4">
-              {statusFilter !== "all" ? 
-                `No applications with status "${statusFilter}"` : 
-                searchQuery ? 
-                  `No applications matching "${searchQuery}"` : 
+              {statusFilter !== "all" ?
+                `No applications with status "${statusFilter}"` :
+                searchQuery ?
+                  `No applications matching "${searchQuery}"` :
                   "You haven't applied to any jobs yet"
               }
             </p>
@@ -375,6 +632,32 @@ const Applications = () => {
             </Button>
           </CardContent>
         </Card>
+      )}
+
+      {/* Resume Editor Dialog */}
+      {selectedResume && (
+        <ResumeTextEditor
+          resume={selectedResume}
+          onSave={handleResumeUpdate}
+          onClose={() => {
+            setIsResumeEditorOpen(false);
+            setSelectedResume(null);
+          }}
+          open={isResumeEditorOpen}
+        />
+      )}
+
+      {/* Cover Letter Editor Dialog */}
+      {selectedCoverLetter && (
+        <CoverLetterEditor
+          coverLetter={selectedCoverLetter}
+          onSave={handleCoverLetterUpdate}
+          onClose={() => {
+            setIsCoverLetterEditorOpen(false);
+            setSelectedCoverLetter(null);
+          }}
+          open={isCoverLetterEditorOpen}
+        />
       )}
     </div>
   );

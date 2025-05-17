@@ -60,6 +60,20 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
+## External APIs
+
+This project integrates with two external APIs:
+
+1. **Job Search API** - Used for searching and retrieving job listings
+2. **Resume API** - Used for resume processing and optimization
+
+To configure these APIs, add the following to your `.env.local` file:
+
+```
+VITE_JOB_SEARCH_API_URL=https://your-job-search-api-url.com
+VITE_RESUME_API_URL=https://your-resume-api-url.com
+```
+
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/4b266f0f-956f-48c1-94d7-4a7f31e37016) and click on Share -> Publish.

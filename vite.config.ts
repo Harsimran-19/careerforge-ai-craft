@@ -14,6 +14,11 @@ export default defineConfig(({ mode }) => ({
         target: 'https://dncdjmxcuxrolxvpoehp.supabase.co/functions/v1',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+      '/sophie-api': {
+        target: 'https://sophie-backend-671377043906.us-central1.run.app',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/sophie-api/, ''),
       }
     }
   },
