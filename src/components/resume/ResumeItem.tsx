@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Download, Trash2, Calendar } from "lucide-react";
+import { FileText, Download, Trash2, Calendar, Eye } from "lucide-react";
 import { format } from "date-fns";
 import {
   AlertDialog,
@@ -14,7 +14,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Resume } from "@/services/documentService";
+import ResumeViewer from "./ResumeViewer";
 
 interface ResumeItemProps {
   resume: Resume;
@@ -30,6 +32,7 @@ const ResumeItem = ({
   onEdit
 }: ResumeItemProps) => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
 
   const handleDelete = () => {
     setIsDeleteDialogOpen(true);
@@ -40,9 +43,20 @@ const ResumeItem = ({
     setIsDeleteDialogOpen(false);
   };
 
+  const handleView = () => {
+    setIsViewDialogOpen(true);
+  };
+
   const handleDownload = () => {
-    // Open the resume URL in a new tab
-    window.open(resume.file_url, '_blank');
+    // Create an anchor and trigger download
+    if (resume.file_url) {
+      const link = document.createElement('a');
+      link.href = resume.file_url;
+      link.download = `${resume.title}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   };
 
   return (
@@ -62,9 +76,16 @@ const ResumeItem = ({
         </div>
       </CardContent>
       <CardFooter className="bg-muted/50 px-6 py-3 flex justify-between">
-        <Button variant="outline" size="sm" onClick={handleDownload}>
-          <Download className="h-4 w-4 mr-1" /> View
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleView}>
+            <Eye className="h-4 w-4 mr-1" /> View
+          </Button>
+          {resume.file_url && (
+            <Button variant="ghost" size="sm" onClick={handleDownload}>
+              <Download className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
         <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={handleDelete}>
           <Trash2 className="h-4 w-4" />
         </Button>
@@ -86,6 +107,16 @@ const ResumeItem = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-4xl h-[80vh]">
+          <ResumeViewer 
+            fileUrl={resume.file_url || ''} 
+            title={resume.title} 
+            onClose={() => setIsViewDialogOpen(false)} 
+          />
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };

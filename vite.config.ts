@@ -19,6 +19,11 @@ export default defineConfig(({ mode }) => ({
         target: 'https://sophie-backend-671377043906.us-central1.run.app',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/sophie-api/, ''),
+      },
+      '/job-search-api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/job-search-api/, ''),
       }
     }
   },
